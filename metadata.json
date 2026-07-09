@@ -1,0 +1,6 @@
+{
+  "name": "Sistem Sponsorship Event UNAI",
+  "description": "Platform sponsorship berbasis web untuk menghubungkan organisasi mahasiswa Universitas Advent Indonesia dengan sponsor dan alumni untuk mendukung pendanaan event.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
