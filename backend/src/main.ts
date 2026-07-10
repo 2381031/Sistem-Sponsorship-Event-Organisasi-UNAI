@@ -1,16 +1,27 @@
 import 'reflect-metadata';
+import { ExpressAdapter } from '@nestjs/platform-express';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
+import express, { Request, Response } from 'express';
 import { AppModule } from './app.module.js';
 import { UserService } from './users/user.service.js';
 import { Role } from './common/enums/role.enum.js';
 
-async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
-  const configService = app.get(ConfigService);
-  const port = configService.get('PORT') ?? 4000;
+const expressApp = express();
 
-  // Ensure admin user exists (seed)
+// Cache instance NestJS antar invocation (penting untuk cold start di Vercel Functions)
+let cachedApp: express.Express | null = null;
+
+async function bootstrapServer(): Promise<express.Express> {
+  if (cachedApp) {
+    return cachedApp;
+  }
+
+  const adapter = new ExpressAdapter(expressApp);
+  const app = await NestFactory.create(AppModule, adapter);
+  const configService = app.get(ConfigService);
+
+  // Seed admin user (sekali saat cold start)
   try {
     const userService = app.get(UserService);
     const adminEmail = 'admin@unai.edu';
@@ -35,8 +46,24 @@ async function bootstrap() {
     allowedHeaders: ['Content-Type', 'Authorization'],
   });
 
-  await app.listen(port);
-  console.log(`Backend berjalan pada http://localhost:${port}`);
+  await app.init(); // PENTING: init() bukan listen() — Vercel yang pegang HTTP server-nya
+  cachedApp = expressApp;
+  return expressApp;
 }
 
-bootstrap();
+// Entry point untuk Vercel Functions: WAJIB ada default export.
+export default async function handler(req: Request, res: Response) {
+  const app = await bootstrapServer();
+  app(req, res);
+}
+
+// Entry point untuk jalan LOKAL (npm run start / start:dev) — tetap pakai app.listen()
+// supaya development experience tidak berubah.
+if (process.env.VERCEL === undefined) {
+  bootstrapServer().then(() => {
+    const port = process.env.PORT ?? 4000;
+    expressApp.listen(port, () => {
+      console.log(`Backend berjalan pada http://localhost:${port}`);
+    });
+  });
+}
