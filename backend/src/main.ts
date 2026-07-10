@@ -19,6 +19,7 @@ async function bootstrapServer(): Promise<express.Express> {
 
   const adapter = new ExpressAdapter(expressApp);
   const app = await NestFactory.create(AppModule, adapter);
+  app.setGlobalPrefix('api'); // penting: samakan dengan prefix /api/* di vercel.json rewrites
   const configService = app.get(ConfigService);
 
   // Seed admin user (sekali saat cold start)
