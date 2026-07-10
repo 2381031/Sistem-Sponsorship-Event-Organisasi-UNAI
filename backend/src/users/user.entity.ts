@@ -1,4 +1,5 @@
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn, Relation } from 'typeorm';
+import { Exclude } from 'class-transformer';
 import { Role } from '../common/enums/role.enum.js';
 import { Event } from '../events/event.entity.js';
 import { Sponsorship } from '../sponsorships/sponsorship.entity.js';
@@ -11,6 +12,7 @@ export class User {
   @Column({ unique: true })
   email!: string;
 
+  @Exclude() // penting: supaya password TIDAK PERNAH ikut ter-serialize ke response API manapun
   @Column()
   password!: string;
 

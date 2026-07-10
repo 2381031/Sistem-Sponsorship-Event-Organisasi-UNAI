@@ -1,7 +1,8 @@
 import 'reflect-metadata';
 import { ExpressAdapter } from '@nestjs/platform-express';
 import { ConfigService } from '@nestjs/config';
-import { NestFactory } from '@nestjs/core';
+import { NestFactory, Reflector } from '@nestjs/core';
+import { ClassSerializerInterceptor } from '@nestjs/common';
 import express, { Request, Response } from 'express';
 import { AppModule } from './app.module.js';
 import { UserService } from './users/user.service.js';
@@ -20,6 +21,8 @@ async function bootstrapServer(): Promise<express.Express> {
   const adapter = new ExpressAdapter(expressApp);
   const app = await NestFactory.create(AppModule, adapter);
   app.setGlobalPrefix('api'); // penting: samakan dengan prefix /api/* di vercel.json rewrites
+  // Global: otomatis buang field yang ditandai @Exclude() (mis. password) dari SEMUA response JSON
+  app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
   const configService = app.get(ConfigService);
 
   // Seed admin user (sekali saat cold start)

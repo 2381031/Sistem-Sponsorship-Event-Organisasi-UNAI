@@ -1,9 +1,12 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import * as bcrypt from 'bcryptjs';
 import { CreateUserDto } from './dto/create-user.dto.js';
 import { UpdateUserDto } from './dto/update-user.dto.js';
 import { User } from './user.entity.js';
+
+const SALT_ROUNDS = 10;
 
 @Injectable()
 export class UserService {
@@ -13,13 +16,20 @@ export class UserService {
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<User> {
-    const user = this.userRepository.create(createUserDto);
+    // Hash di sini juga (bukan cuma di AuthController.register) supaya SEMUA jalur
+    // pembuatan user (termasuk seed admin di main.ts) tidak pernah simpan plain-text.
+    const hashedPassword = await bcrypt.hash(createUserDto.password, SALT_ROUNDS);
+    const user = this.userRepository.create({ ...createUserDto, password: hashedPassword });
     return this.userRepository.save(user);
   }
 
   async update(id: string, updateUserDto: UpdateUserDto): Promise<User> {
     const user = await this.findOne(id);
-    Object.assign(user, updateUserDto);
+    const data = { ...updateUserDto };
+    if (data.password) {
+      data.password = await bcrypt.hash(data.password, SALT_ROUNDS);
+    }
+    Object.assign(user, data);
     return this.userRepository.save(user);
   }
 

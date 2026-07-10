@@ -1,5 +1,4 @@
 import { Body, Controller, HttpCode, HttpStatus, Post, UsePipes, ValidationPipe } from '@nestjs/common';
-import * as bcrypt from 'bcryptjs';
 import { AuthService } from './auth.service.js';
 import { LoginUserDto } from './dto/login-user.dto.js';
 import { CreateUserDto } from '../users/dto/create-user.dto.js';
@@ -15,10 +14,10 @@ export class AuthController {
   @Post('register')
   @UsePipes(new ValidationPipe({ whitelist: true }))
   async register(@Body() createUserDto: CreateUserDto) {
-    const password = await bcrypt.hash(createUserDto.password, 10);
+    // Password sudah otomatis di-hash di dalam UserService.create(), jangan hash di sini lagi
+    // (kalau di-hash 2x, login nanti akan selalu gagal karena hash tidak akan pernah cocok).
     const user = await this.userService.create({
       ...createUserDto,
-      password,
       status_akun: 'pending',
     });
     return {
