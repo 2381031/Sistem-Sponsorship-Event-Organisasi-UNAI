@@ -1,4 +1,4 @@
-import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, OneToMany, PrimaryGeneratedColumn, Relation } from 'typeorm';
 import { Role } from '../common/enums/role.enum.js';
 import { Event } from '../events/event.entity.js';
 import { Sponsorship } from '../sponsorships/sponsorship.entity.js';
@@ -42,7 +42,7 @@ export class User {
   };
 
   @OneToMany(() => Event, (event) => event.organizer)
-  events!: Event[];
+  events!: Relation<Event>[];
 
   // Sponsorship dihubungkan lewat kolom id_sponsor (string), bukan relasi TypeORM,
   // sehingga tidak dideklarasikan sebagai @OneToMany di sini.

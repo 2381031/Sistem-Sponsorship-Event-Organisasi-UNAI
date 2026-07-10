@@ -18,9 +18,12 @@ import { UserModule } from './users/user.module.js';
         ssl: {
           rejectUnauthorized: false, // wajib untuk NeonDB serverless Postgres
         },
-        // synchronize: true BERBAHAYA di production (bisa merusak data/skema).
-        // Gunakan false di production, lalu jalankan migration TypeORM terpisah.
-        synchronize: configService.get<string>('NODE_ENV') !== 'production',
+        // TAHAP AWAL: synchronize: true supaya tabel otomatis dibuat di NeonDB
+        // yang masih kosong. SETELAH tabel berhasil terbentuk dan ada data asli,
+        // ganti baris ini kembali ke:
+        // synchronize: configService.get<string>('NODE_ENV') !== 'production',
+        // lalu pakai TypeORM migration untuk perubahan skema selanjutnya.
+        synchronize: true,
         autoLoadEntities: true,
       }),
     }),

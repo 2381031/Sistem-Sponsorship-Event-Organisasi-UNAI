@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "module": "es2020",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "target": "es2020",
     "lib": ["es2020"],
     "experimentalDecorators": true,
@@ -11,8 +11,6 @@
     "sourceMap": true,
     "outDir": "dist",
     "rootDir": "src",
-    "baseUrl": "./",
-    
     "incremental": true,
     "skipLibCheck": true,
     "esModuleInterop": true,

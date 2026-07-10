@@ -1,4 +1,4 @@
-import { Column, Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn, Relation } from 'typeorm';
 import { User } from '../users/user.entity.js';
 import { Sponsorship } from '../sponsorships/sponsorship.entity.js';
 
@@ -41,7 +41,7 @@ export class Event {
   paket_tersedia?: Array<Record<string, any>>;
 
   @ManyToOne(() => User, (user) => user.events)
-  organizer!: User;
+  organizer!: Relation<User>;
 
   // Sponsorship dihubungkan lewat kolom id_event (string), bukan relasi TypeORM,
   // sehingga tidak dideklarasikan sebagai @OneToMany di sini.
