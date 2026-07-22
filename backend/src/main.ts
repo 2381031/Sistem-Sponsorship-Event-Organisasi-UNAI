@@ -56,10 +56,11 @@ async function bootstrapServer(): Promise<express.Express> {
 }
 
 // Entry point untuk Vercel Functions: WAJIB ada default export.
-export default async function handler(req: Request, res: Response) {
-  const app = await bootstrapServer();
-  app(req, res);
-}
+// Dinonaktifkan: frontend di-deploy terpisah di Vercel, backend jalan lokal.
+// export default async function handler(req: Request, res: Response) {
+//   const app = await bootstrapServer();
+//   app(req, res);
+// }
 
 // Entry point untuk jalan LOKAL (npm run start / start:dev) — tetap pakai app.listen()
 // supaya development experience tidak berubah.
