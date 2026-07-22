@@ -1,7 +1,7 @@
 {
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "installCommand": "rm -rf node_modules && npm install",
+  "installCommand": "rm -rf node_modules .vercel .vite && npm install",
   "rewrites": [
     {
       "source": "/(.*)",
