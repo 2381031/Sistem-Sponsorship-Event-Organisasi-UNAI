@@ -173,8 +173,7 @@ export default function AuthScreen({ onLoginSuccess, allUsers, onRegisterUser }:
           </button>
 
           <div className="text-center mb-8">
-            <h2 className="text-2xl font-bold text-[#1a2c4d] tracking-tight">Daftar Sebagai Bagian dari Sistem</h2>
-            <p className="text-gray-400 text-xs mt-1.5 font-medium">Pilih peran Anda sesuai alur sponsorship berbasis web pada penelitian UNAI</p>
+            <h2 className="text-2xl font-bold text-[#1a2c4d] tracking-tight">Daftar</h2>
           </div>
 
           <div className="space-y-6">
