@@ -1,5 +1,2 @@
-export default async function handler(req, res) {
-  const mod = await import('../backend/dist/main.js');
-  const server = mod.default;
-  return server(req, res);
-}
+import handler from '../backend/dist/main.js';
+export default handler;
