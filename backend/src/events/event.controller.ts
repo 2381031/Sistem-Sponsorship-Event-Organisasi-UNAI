@@ -2,8 +2,8 @@ import {
   Body, Controller, Get, Param, Patch, Post, Delete,
   UseGuards, Request, ParseIntPipe,
 } from '@nestjs/common';
-import { EventService } from './event.service.js';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
+import { EventService } from './event.service';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @Controller('events')
 export class EventController {
@@ -13,7 +13,7 @@ export class EventController {
   @Post()
   async create(@Body() body: any, @Request() req: any) {
     return this.eventService.create({
-      id_organisasi: req.user.id_pengguna,
+      id_pengguna: req.user.id_pengguna,
       nama_event: body.nama_event,
       tanggal_event: body.tanggal_event,
       deskripsi: body.deskripsi,

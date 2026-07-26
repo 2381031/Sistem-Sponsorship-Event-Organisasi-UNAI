@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { AuthModule } from './auth/auth.module.js';
-import { UserModule } from './users/user.module.js';
-import { EventModule } from './events/event.module.js';
-import { SponsorshipModule } from './sponsorships/sponsorship.module.js';
-import { DokumentasiModule } from './common/dokumentasi.module.js';
+import { AuthModule } from './auth/auth.module';
+import { UserModule } from './users/user.module';
+import { EventModule } from './events/event.module';
+import { SponsorshipModule } from './sponsorships/sponsorship.module';
+import { DokumentasiModule } from './common/dokumentasi.module';
 
 @Module({
   imports: [

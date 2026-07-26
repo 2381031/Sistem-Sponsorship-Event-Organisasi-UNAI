@@ -8,8 +8,9 @@ export class CreateUserDto {
   @MinLength(6)
   password!: string;
 
+  @IsOptional()
   @IsString()
-  nama_lengkap!: string;
+  nama_lengkap?: string;
 
   @IsEnum(['organisasi', 'sponsor', 'admin'] as const)
   peran!: string;

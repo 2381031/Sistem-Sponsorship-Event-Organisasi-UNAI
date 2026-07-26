@@ -1,0 +1,7 @@
+{
+  "compilerOptions": {
+    "webpack": false,
+    "builder": "swc",
+    "tsConfigPath": "tsconfig.json"
+  }
+}

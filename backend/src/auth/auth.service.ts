@@ -1,10 +1,10 @@
 import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import * as bcrypt from 'bcryptjs';
-import { UserService } from '../users/user.service.js';
-import { LoginUserDto } from './dto/login-user.dto.js';
-import { CreateUserDto } from '../users/dto/create-user.dto.js';
-import pool from '../database.js';
+import bcryptjs from 'bcryptjs';
+import { UserService } from '../users/user.service';
+import { LoginUserDto } from './dto/login-user.dto';
+import { CreateUserDto } from '../users/dto/create-user.dto';
+import pool from '../database';
 
 @Injectable()
 export class AuthService {
@@ -20,7 +20,7 @@ export class AuthService {
     const user = await this.userService.create(dto);
     return {
       message: 'Pendaftaran berhasil! Menunggu verifikasi admin.',
-      user: { id: user.id_pengguna, email: user.email, nama_lengkap: user.nama_lengkap, peran: user.peran, status_akun: user.status_akun },
+      user: { id: user.id_pengguna, email: user.email, peran: user.peran, status_akun: user.status_akun },
     };
   }
 
@@ -28,7 +28,7 @@ export class AuthService {
     const user = await this.userService.findByEmail(dto.email);
     if (!user) throw new UnauthorizedException('Email atau password salah');
 
-    const passwordMatches = await bcrypt.compare(dto.password, user.kata_sandi);
+    const passwordMatches = await bcryptjs.compare(dto.password, user.kata_sandi);
     if (!passwordMatches) throw new UnauthorizedException('Email atau password salah');
 
     if (user.status_akun === 'Menunggu Verifikasi')
@@ -54,7 +54,6 @@ export class AuthService {
       user: {
         id: user.id_pengguna,
         email: user.email,
-        nama_lengkap: user.nama_lengkap,
         peran: user.peran,
         status_akun: user.status_akun,
         profil: profilDetail,

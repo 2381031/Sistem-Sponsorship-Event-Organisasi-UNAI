@@ -2,8 +2,8 @@ import {
   Body, Controller, Get, Param, Post, Delete,
   UseGuards, Request, ParseIntPipe,
 } from '@nestjs/common';
-import { DokumentasiService } from './dokumentasi.service.js';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
+import { DokumentasiService } from './dokumentasi.service';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @Controller('dokumentasi')
 export class DokumentasiController {

@@ -2,9 +2,23 @@ import 'reflect-metadata';
 import { ExpressAdapter } from '@nestjs/platform-express';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
-import { ClassSerializerInterceptor } from '@nestjs/common';
+import { ClassSerializerInterceptor, ExceptionFilter, Catch, ArgumentsHost, HttpException } from '@nestjs/common';
 import express, { Request, Response } from 'express';
-import { AppModule } from './app.module.js';
+import { AppModule } from './app.module';
+
+@Catch()
+export class AllExceptionsFilter implements ExceptionFilter {
+  catch(exception: unknown, host: ArgumentsHost) {
+    const ctx = host.switchToHttp();
+    const response = ctx.getResponse<Response>();
+    console.error('EXCEPTION:', exception);
+    if (exception instanceof HttpException) {
+      response.status(exception.getStatus()).json(exception.getResponse());
+    } else {
+      response.status(500).json({ statusCode: 500, message: (exception as any)?.message || 'Internal server error' });
+    }
+  }
+}
 
 const expressApp = express();
 
@@ -18,6 +32,7 @@ async function bootstrapServer(): Promise<express.Express> {
   const adapter = new ExpressAdapter(expressApp);
   const app = await NestFactory.create(AppModule, adapter, { logger: ['error', 'warn', 'log'] });
   app.setGlobalPrefix('api');
+  app.useGlobalFilters(new AllExceptionsFilter());
 
   app.enableCors({
     origin: '*',

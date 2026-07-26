@@ -1,10 +1,10 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import pool from '../database.js';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import pool from '../database';
 
 @Injectable()
 export class EventService {
   async create(data: {
-    id_organisasi: number;
+    id_pengguna: number;
     nama_event: string;
     tanggal_event: string;
     deskripsi?: string;
@@ -13,6 +13,10 @@ export class EventService {
     status_event?: string;
     paket_tersedia?: Array<{ nama_paket: string; persentase_dana: number; deskripsi_keuntungan?: string }>;
   }) {
+    const orgResult = await pool.query('SELECT id_organisasi FROM organisasi WHERE id_pengguna = $1', [data.id_pengguna]);
+    if (orgResult.rows.length === 0) throw new BadRequestException('Profil organisasi tidak ditemukan');
+    const idOrganisasi = orgResult.rows[0].id_organisasi;
+
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
@@ -21,7 +25,7 @@ export class EventService {
         `INSERT INTO event (id_organisasi, nama_event, tanggal_event, deskripsi, target_dana, url_proposal, status_event)
          VALUES ($1, $2, $3, $4, $5, $6, $7)
          RETURNING *`,
-        [data.id_organisasi, data.nama_event, data.tanggal_event,
+        [idOrganisasi, data.nama_event, data.tanggal_event,
          data.deskripsi || null, data.target_dana, data.url_proposal || null, data.status_event || 'open'],
       );
       const event = evResult.rows[0];
@@ -48,7 +52,7 @@ export class EventService {
 
   async findAll() {
     const evResult = await pool.query('SELECT * FROM event ORDER BY id_event DESC');
-    const events = [];
+    const events: any[] = [];
     for (const ev of evResult.rows) {
       const paketResult = await pool.query('SELECT * FROM paket_sponsorship WHERE id_event = $1', [ev.id_event]);
       events.push({ ...ev, paket_tersedia: paketResult.rows });
@@ -56,7 +60,10 @@ export class EventService {
     return events;
   }
 
-  async findByOrganisasi(idOrganisasi: number) {
+  async findByOrganisasi(idPengguna: number) {
+    const orgResult = await pool.query('SELECT id_organisasi FROM organisasi WHERE id_pengguna = $1', [idPengguna]);
+    if (orgResult.rows.length === 0) return [];
+    const idOrganisasi = orgResult.rows[0].id_organisasi;
     const evResult = await pool.query('SELECT * FROM event WHERE id_organisasi = $1 ORDER BY id_event DESC', [idOrganisasi]);
     return evResult.rows;
   }

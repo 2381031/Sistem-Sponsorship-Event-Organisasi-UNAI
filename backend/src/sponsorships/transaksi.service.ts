@@ -1,19 +1,26 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import pool from '../database.js';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import pool from '../database';
 
 @Injectable()
 export class TransaksiService {
-  async create(data: any) {
+  async create(data: {
+    id_pengguna: number;
+    id_event: number;
+    id_paket: number;
+    jumlah: number;
+    bukti_pembayaran?: string;
+  }) {
+    const sponsorResult = await pool.query('SELECT id_sponsor FROM sponsor WHERE id_pengguna = $1', [data.id_pengguna]);
+    if (sponsorResult.rows.length === 0) throw new BadRequestException('Profil sponsor tidak ditemukan');
+    const idSponsor = sponsorResult.rows[0].id_sponsor;
+
     const result = await pool.query(
       `INSERT INTO transaksi_sponsorship
-       (id_event, id_sponsor, id_paket, jumlah, bukti_pembayaran, status_pembayaran,
-        nama_event, nama_sponsor, nama_paket, rekening_tujuan, nama_pengirim)
-       VALUES ($1, $2, $3, $4, $5, 'pending_verification', $6, $7, $8, $9, $10)
+       (id_event, id_sponsor, id_paket, jumlah, bukti_pembayaran, status_pembayaran)
+       VALUES ($1, $2, $3, $4, $5, 'pending_verification')
        RETURNING *`,
-      [data.id_event, data.id_sponsor, data.id_paket, data.jumlah,
-       data.bukti_pembayaran || null, data.nama_event || null,
-       data.nama_sponsor || null, data.nama_paket || null,
-       data.rekening_tujuan || null, data.nama_pengirim || null],
+      [data.id_event, idSponsor, data.id_paket, data.jumlah,
+       data.bukti_pembayaran || null],
     );
     return result.rows[0];
   }
@@ -23,7 +30,10 @@ export class TransaksiService {
     return result.rows;
   }
 
-  async findBySponsor(idSponsor: number) {
+  async findBySponsor(idPengguna: number) {
+    const sponsorResult = await pool.query('SELECT id_sponsor FROM sponsor WHERE id_pengguna = $1', [idPengguna]);
+    if (sponsorResult.rows.length === 0) return [];
+    const idSponsor = sponsorResult.rows[0].id_sponsor;
     const result = await pool.query(
       'SELECT * FROM transaksi_sponsorship WHERE id_sponsor = $1 ORDER BY id_transaksi DESC', [idSponsor],
     );
@@ -36,16 +46,9 @@ export class TransaksiService {
     return result.rows[0];
   }
 
-  async updateStatus(id: number, status: string, adminId?: number) {
+  async updateStatus(id: number, status: string) {
     await this.findOne(id);
-    if (adminId !== undefined) {
-      await pool.query(
-        'UPDATE transaksi_sponsorship SET status_pembayaran = $1, id_admin_verifikator = $2 WHERE id_transaksi = $3',
-        [status, adminId, id],
-      );
-    } else {
-      await pool.query('UPDATE transaksi_sponsorship SET status_pembayaran = $1 WHERE id_transaksi = $2', [status, id]);
-    }
+    await pool.query('UPDATE transaksi_sponsorship SET status_pembayaran = $1 WHERE id_transaksi = $2', [status, id]);
     return this.findOne(id);
   }
 }

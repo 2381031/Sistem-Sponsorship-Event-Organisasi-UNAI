@@ -2,8 +2,8 @@ import {
   Body, Controller, Get, Param, Patch, Post,
   UseGuards, Request, ParseIntPipe,
 } from '@nestjs/common';
-import { TransaksiService } from './transaksi.service.js';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
+import { TransaksiService } from './transaksi.service';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @Controller('sponsorships')
 export class TransaksiController {
@@ -13,16 +13,11 @@ export class TransaksiController {
   @Post()
   async create(@Body() body: any, @Request() req: any) {
     return this.transaksiService.create({
+      id_pengguna: req.user.id_pengguna,
       id_event: body.id_event,
-      id_sponsor: req.user.id_pengguna,
       id_paket: body.id_paket,
       jumlah: body.jumlah,
       bukti_pembayaran: body.bukti_pembayaran,
-      nama_event: body.nama_event,
-      nama_sponsor: body.nama_sponsor,
-      nama_paket: body.nama_paket,
-      rekening_tujuan: body.rekening_tujuan,
-      nama_pengirim: body.nama_pengirim,
     });
   }
 
@@ -44,7 +39,7 @@ export class TransaksiController {
 
   @UseGuards(JwtAuthGuard)
   @Patch(':id/verify')
-  async verify(@Param('id', ParseIntPipe) id: number, @Body('status') status: string, @Request() req: any) {
-    return this.transaksiService.updateStatus(id, status, req.user.id_pengguna);
+  async verify(@Param('id', ParseIntPipe) id: number, @Body('status') status: string) {
+    return this.transaksiService.updateStatus(id, status);
   }
 }

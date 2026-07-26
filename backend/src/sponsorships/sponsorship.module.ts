@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
-import { TransaksiController } from './sponsorship.controller.js';
-import { TransaksiService } from './transaksi.service.js';
+import { TransaksiController } from './sponsorship.controller';
+import { TransaksiService } from './transaksi.service';
 
 @Module({
   controllers: [TransaksiController],

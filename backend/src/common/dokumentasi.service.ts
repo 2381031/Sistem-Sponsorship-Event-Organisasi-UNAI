@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import pool from '../database.js';
+import pool from '../database';
 
 @Injectable()
 export class DokumentasiService {

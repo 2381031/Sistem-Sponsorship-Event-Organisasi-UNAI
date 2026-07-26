@@ -2,7 +2,7 @@ import pg from 'pg';
 import { config } from 'dotenv';
 import { resolve } from 'path';
 
-config({ path: resolve(import.meta.dirname, '..', '.env') });
+config({ path: resolve(process.cwd(), '.env') });
 
 let _pool: pg.Pool | null = null;
 
