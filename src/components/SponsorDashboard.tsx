@@ -37,7 +37,7 @@ export default function SponsorDashboard({ currentUser, events, transactions, do
   const [profileLoading, setProfileLoading] = useState(false);
 
   const openEvents = events.filter(e =>
-    e.nama_event.toLowerCase().includes(searchTerm.toLowerCase())
+    e.status_event === 'Dipublikasikan' && e.nama_event.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const myTransactions = transactions.filter(t => t.id_sponsor === currentUser.id);
@@ -105,14 +105,14 @@ export default function SponsorDashboard({ currentUser, events, transactions, do
                 <p className="text-gray-400 text-[10px] font-bold uppercase mt-1">Event Tersedia</p>
               </div>
               <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm text-center">
-                <h4 className="text-2xl font-extrabold text-[#1a2c4d]">{myTransactions.filter(t => t.status_pembayaran === 'verified').length}</h4>
+                <h4 className="text-2xl font-extrabold text-[#1a2c4d]">{myTransactions.filter(t => t.status_pembayaran === 'Diverifikasi').length}</h4>
                 <p className="text-gray-400 text-[10px] font-bold uppercase mt-1">Sponsorship Aktif</p>
               </div>
             </div>
             <div className="space-y-4">
               {openEvents.map(event => {
                 const eventTxs = transactions.filter(t => t.id_event === event.id_event);
-                const eventApproved = eventTxs.filter(t => t.status_pembayaran === 'verified');
+                const eventApproved = eventTxs.filter(t => t.status_pembayaran === 'Diverifikasi');
                 const eventCollected = eventApproved.reduce((sum, t) => sum + t.jumlah, 0);
                 const progressPct = event.target_dana > 0 ? Math.min(100, Math.round((eventCollected / event.target_dana) * 100)) : 0;
                 return (
@@ -148,11 +148,11 @@ export default function SponsorDashboard({ currentUser, events, transactions, do
               <p className="text-[10px] text-gray-400 font-bold">Event: {selectedEvent.nama_event}</p>
               <p className="text-[11px] text-[#1a2c4d] font-bold">Target: {formatIDR(selectedEvent.target_dana)}</p>
             </div>
-            {selectedEvent.status_event === 'closed' && <div className="p-4 rounded-xl bg-yellow-50 border border-yellow-100 text-yellow-800 text-sm font-bold">Event sudah ditutup.</div>}
+            {selectedEvent.status_event === 'Ditutup' && <div className="p-4 rounded-xl bg-yellow-50 border border-yellow-100 text-yellow-800 text-sm font-bold">Event sudah ditutup.</div>}
             <div className="space-y-4">
               {selectedEvent.paket_tersedia?.map(pkg => {
                 const isSelected = selectedPackage?.id_paket === pkg.id_paket;
-                const disabled = selectedEvent.status_event === 'closed';
+                const disabled = selectedEvent.status_event === 'Ditutup';
                 return (
                   <div key={pkg.id_paket} onClick={() => !disabled && setSelectedPackage(pkg)}
                     className={`bg-white rounded-3xl p-5 border cursor-pointer transition-all space-y-3 ${disabled ? 'opacity-60 cursor-not-allowed' : ''} ${isSelected ? 'border-yellow-400 ring-2 ring-yellow-400/20' : 'border-gray-100'}`}>
@@ -169,8 +169,8 @@ export default function SponsorDashboard({ currentUser, events, transactions, do
               })}
             </div>
             <button onClick={() => { if (!selectedPackage) { alert('Pilih paket dulu'); return; } setCurrentStep('bukti-bayar'); }}
-              disabled={selectedEvent.status_event === 'closed'}
-              className={`w-full py-3 ${selectedEvent.status_event === 'closed' ? 'bg-gray-300 text-gray-600' : 'bg-[#1a2c4d] hover:bg-[#15233e] text-white'} font-bold text-xs rounded-xl shadow-md`}>
+              disabled={selectedEvent.status_event === 'Ditutup'}
+              className={`w-full py-3 ${selectedEvent.status_event === 'Ditutup' ? 'bg-gray-300 text-gray-600' : 'bg-[#1a2c4d] hover:bg-[#15233e] text-white'} font-bold text-xs rounded-xl shadow-md`}>
               Lanjutkan Pembayaran
             </button>
           </div>
@@ -216,8 +216,8 @@ export default function SponsorDashboard({ currentUser, events, transactions, do
                 <div key={tx.id_transaksi} className="bg-white rounded-3xl border border-gray-100 p-5 shadow-sm space-y-4">
                   <div className="flex justify-between items-start">
                     <h3 className="text-base font-bold text-[#1a2c4d]">{tx.nama_event || `Event #${tx.id_event}`}</h3>
-                    <span className={`px-2.5 py-0.5 rounded text-[10px] font-bold uppercase ${tx.status_pembayaran === 'verified' ? 'bg-[#e2f6ec] text-[#2ebd7d]' : 'bg-[#fffbeb] text-[#d97706]'}`}>
-                      {tx.status_pembayaran === 'verified' ? 'VERIFIED' : 'PENDING'}
+                    <span className={`px-2.5 py-0.5 rounded text-[10px] font-bold uppercase ${tx.status_pembayaran === 'Diverifikasi' ? 'bg-[#e2f6ec] text-[#2ebd7d]' : 'bg-[#fffbeb] text-[#d97706]'}`}>
+                      {tx.status_pembayaran === 'Diverifikasi' ? 'DIVERIFIKASI' : 'MENUNGGU'}
                     </span>
                   </div>
                   <div className="grid grid-cols-2 gap-x-4 gap-y-3 pt-3 border-t border-gray-50 text-xs">
@@ -225,7 +225,7 @@ export default function SponsorDashboard({ currentUser, events, transactions, do
                     <div><p className="text-gray-400 font-medium">Jumlah</p><p className="font-extrabold text-[#1a2c4d] mt-0.5 font-mono">{formatIDR(tx.jumlah)}</p></div>
                     <div><p className="text-gray-400 font-medium">Tanggal</p><p className="font-bold text-gray-700 mt-0.5">{new Date(tx.tanggal_transaksi).toLocaleDateString('id-ID')}</p></div>
                   </div>
-                  {tx.status_pembayaran === 'verified' && docs.filter(d => d.id_event === tx.id_event).length > 0 && (
+                  {tx.status_pembayaran === 'Diverifikasi' && docs.filter(d => d.id_event === tx.id_event).length > 0 && (
                     <div className="space-y-2 pt-2 border-t border-gray-50">
                       <p className="text-[10px] text-gray-400 font-bold">Dokumentasi Event</p>
                       {docs.filter(d => d.id_event === tx.id_event).map(doc => (

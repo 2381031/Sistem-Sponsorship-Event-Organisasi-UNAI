@@ -17,7 +17,7 @@ export class TransaksiService {
     const result = await pool.query(
       `INSERT INTO transaksi_sponsorship
        (id_event, id_sponsor, id_paket, jumlah, bukti_pembayaran, status_pembayaran)
-       VALUES ($1, $2, $3, $4, $5, 'pending_verification')
+       VALUES ($1, $2, $3, $4, $5, 'Menunggu')
        RETURNING *`,
       [data.id_event, idSponsor, data.id_paket, data.jumlah,
        data.bukti_pembayaran || null],

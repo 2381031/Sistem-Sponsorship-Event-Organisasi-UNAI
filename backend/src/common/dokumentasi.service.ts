@@ -7,7 +7,7 @@ export class DokumentasiService {
     const result = await pool.query(
       `INSERT INTO dokumentasi (id_event, id_pengguna, url_file, tipe_file)
        VALUES ($1, $2, $3, $4) RETURNING *`,
-      [data.id_event, data.id_pengguna, data.url_file, data.tipe_file || 'pdf'],
+      [data.id_event, data.id_pengguna, data.url_file, data.tipe_file || 'PDF'],
     );
     return result.rows[0];
   }

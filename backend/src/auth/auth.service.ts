@@ -41,10 +41,10 @@ export class AuthService {
     const accessToken = this.jwtService.sign(payload);
 
     let profilDetail: any = null;
-    if (user.peran === 'organisasi') {
+    if (user.peran === 'Organisasi') {
       const r = await pool.query('SELECT * FROM organisasi WHERE id_pengguna = $1', [user.id_pengguna]);
       if (r.rows[0]) profilDetail = r.rows[0];
-    } else if (user.peran === 'sponsor') {
+    } else if (user.peran === 'Sponsor') {
       const r = await pool.query('SELECT * FROM sponsor WHERE id_pengguna = $1', [user.id_pengguna]);
       if (r.rows[0]) profilDetail = r.rows[0];
     }

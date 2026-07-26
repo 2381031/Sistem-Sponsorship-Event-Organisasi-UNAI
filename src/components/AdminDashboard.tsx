@@ -25,11 +25,11 @@ export default function AdminDashboard({
   const formatIDR = (num: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(num);
 
   const pendingAccounts = allUsers.filter(u => u.status_akun === 'Menunggu Verifikasi');
-  const pendingPayments = transactions.filter(t => t.status_pembayaran === 'pending_verification');
+  const pendingPayments = transactions.filter(t => t.status_pembayaran === 'Menunggu');
 
   const getUserDisplayName = (u: User) => {
-    if (u.peran === 'organisasi' && u.profil?.nama_organisasi) return u.profil.nama_organisasi;
-    if (u.peran === 'sponsor' && u.profil?.nama_perusahaan) return u.profil.nama_perusahaan;
+    if (u.peran === 'Organisasi' && u.profil?.nama_organisasi) return u.profil.nama_organisasi;
+    if (u.peran === 'Sponsor' && u.profil?.nama_perusahaan) return u.profil.nama_perusahaan;
     return u.email;
   };
 
@@ -69,8 +69,9 @@ export default function AdminDashboard({
                     <div className="space-y-1 text-xs">
                       <p><span className="font-semibold text-gray-400 w-16 inline-block">Email:</span> <span className="font-mono">{account.email}</span></p>
                       <p><span className="font-semibold text-gray-400 w-16 inline-block">No. Telp:</span> {account.profil?.no_telp || '-'}</p>
-                      {account.peran === 'organisasi' && <p><span className="font-semibold text-gray-400 w-16 inline-block">Rekening:</span> {account.profil?.nomor_rekening} a.n. {account.profil?.nama_rekening}</p>}
-                      {account.peran === 'sponsor' && <p><span className="font-semibold text-gray-400 w-16 inline-block">Alamat:</span> {account.profil?.alamat}</p>}
+                      {account.peran === 'Organisasi' && <p><span className="font-semibold text-gray-400 w-16 inline-block">Bank:</span> {account.profil?.nama_bank || '-'}</p>}
+                      {account.peran === 'Organisasi' && <p><span className="font-semibold text-gray-400 w-16 inline-block">Rekening:</span> {account.profil?.nomor_rekening} a.n. {account.profil?.nama_rekening}</p>}
+                      {account.peran === 'Sponsor' && <p><span className="font-semibold text-gray-400 w-16 inline-block">Alamat:</span> {account.profil?.alamat}</p>}
                     </div>
                     <div className="grid grid-cols-2 gap-3 pt-2">
                       <button onClick={() => onApproveUser(account.id)} className="py-2.5 px-4 bg-[#22c55e] hover:bg-emerald-600 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all">
@@ -100,14 +101,14 @@ export default function AdminDashboard({
                   <div className="space-y-1 min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <h3 className="text-xs font-extrabold text-[#1a2c4d] truncate">{getUserDisplayName(u)}</h3>
-                      <span className={`px-1.5 py-0.5 text-[8px] font-extrabold font-mono rounded-md uppercase ${u.status_akun === 'Terverifikasi' ? 'bg-green-100 text-green-700' : u.status_akun === 'Menunggu Verifikasi' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>
-                        {u.status_akun === 'Terverifikasi' ? 'ACTIVE' : u.status_akun === 'Menunggu Verifikasi' ? 'PENDING' : 'REJECTED'}
+                      <span className={`px-1.5 py-0.5 text-[8px] font-extrabold font-mono rounded-md uppercase ${u.status_akun === 'Aktif' ? 'bg-green-100 text-green-700' : u.status_akun === 'Menunggu Verifikasi' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>
+                        {u.status_akun === 'Aktif' ? 'ACTIVE' : u.status_akun === 'Menunggu Verifikasi' ? 'PENDING' : 'REJECTED'}
                       </span>
                     </div>
                     <p className="text-[10px] text-gray-400 font-mono truncate">{u.email}</p>
-                    <span className={`px-1.5 py-0.5 text-[8px] font-extrabold rounded-md uppercase ${u.peran === 'admin' ? 'bg-red-50 text-red-600' : u.peran === 'organisasi' ? 'bg-blue-50 text-blue-600' : 'bg-emerald-50 text-emerald-600'}`}>{u.peran}</span>
+                    <span className={`px-1.5 py-0.5 text-[8px] font-extrabold rounded-md uppercase ${u.peran === 'Admin' ? 'bg-red-50 text-red-600' : u.peran === 'Organisasi' ? 'bg-blue-50 text-blue-600' : 'bg-emerald-50 text-emerald-600'}`}>{u.peran}</span>
                   </div>
-                  {u.peran !== 'admin' && (
+                  {u.peran !== 'Admin' && (
                     <button onClick={() => { if (confirm('Hapus pengguna ini secara permanen?')) onDeleteUser(u.id); }}
                       className="p-2.5 text-gray-400 hover:text-red-600 rounded-xl hover:bg-red-50 active:scale-95 transition-all shrink-0">
                       <Trash2 className="h-4 w-4" />

@@ -1,7 +1,7 @@
-export type Role = 'organisasi' | 'sponsor' | 'admin';
-export type AccountStatus = 'Menunggu Verifikasi' | 'Terverifikasi' | 'Ditolak';
-export type EventStatus = 'open' | 'closed';
-export type TransactionStatus = 'unpaid' | 'pending_verification' | 'verified' | 'rejected';
+export type Role = 'Organisasi' | 'Sponsor' | 'Admin';
+export type AccountStatus = 'Menunggu Verifikasi' | 'Aktif' | 'Ditolak';
+export type EventStatus = 'Draft' | 'Dipublikasikan' | 'Ditutup';
+export type TransactionStatus = 'Menunggu' | 'Diverifikasi' | 'Ditolak';
 
 export interface User {
   id: number;

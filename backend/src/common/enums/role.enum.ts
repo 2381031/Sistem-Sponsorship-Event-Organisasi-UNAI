@@ -1,5 +1,5 @@
 export enum Role {
-  Admin = 'admin',
-  Organisasi = 'organisasi',
-  Sponsor = 'sponsor',
+  Admin = 'Admin',
+  Organisasi = 'Organisasi',
+  Sponsor = 'Sponsor',
 }

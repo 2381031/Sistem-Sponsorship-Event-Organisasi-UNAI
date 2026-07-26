@@ -23,6 +23,7 @@ export default function AuthScreen({ onLoginSuccess, onRegisterUser }: AuthScree
   const [orgDeskripsi, setOrgDeskripsi] = useState('');
   const [orgRekNo, setOrgRekNo] = useState('');
   const [orgRekNama, setOrgRekNama] = useState('');
+  const [orgNamaBank, setOrgNamaBank] = useState('');
 
   const [sponNama, setSponNama] = useState('');
   const [sponEmail, setSponEmail] = useState('');
@@ -60,11 +61,12 @@ export default function AuthScreen({ onLoginSuccess, onRegisterUser }: AuthScree
         email: orgEmail,
         password: orgPassword,
         nama_lengkap: orgNama,
-        peran: 'organisasi',
+        peran: 'Organisasi',
         organisasiDetails: {
           nama_organisasi: orgNama,
           deskripsi: orgDeskripsi,
           no_telp: orgNoTelp,
+          nama_bank: orgNamaBank,
           nama_rekening: orgRekNama,
           nomor_rekening: orgRekNo,
         },
@@ -73,7 +75,7 @@ export default function AuthScreen({ onLoginSuccess, onRegisterUser }: AuthScree
       setTimeout(() => {
         setRegisterSuccess('');
         setCurrentStep('login');
-        setOrgNama(''); setOrgEmail(''); setOrgPassword(''); setOrgNoTelp(''); setOrgDeskripsi(''); setOrgRekNo(''); setOrgRekNama('');
+        setOrgNama(''); setOrgEmail(''); setOrgPassword(''); setOrgNoTelp(''); setOrgDeskripsi(''); setOrgRekNo(''); setOrgRekNama(''); setOrgNamaBank('');
       }, 3000);
     } catch (err: any) {
       setRegisterError(err.message || 'Pendaftaran gagal');
@@ -92,7 +94,7 @@ export default function AuthScreen({ onLoginSuccess, onRegisterUser }: AuthScree
         email: sponEmail,
         password: sponPassword,
         nama_lengkap: sponNama,
-        peran: 'sponsor',
+        peran: 'Sponsor',
         sponsorDetails: {
           nama_perusahaan: sponNama,
           alamat: sponAlamat,
@@ -220,6 +222,22 @@ export default function AuthScreen({ onLoginSuccess, onRegisterUser }: AuthScree
             <div className="space-y-1">
               <label className="text-xs font-bold text-gray-700">Nomor Telepon <span className="text-red-500">*</span></label>
               <input type="text" required placeholder="08123456789" value={orgNoTelp} onChange={(e) => setOrgNoTelp(e.target.value)} className="w-full px-4 py-3 text-xs bg-[#f8fafc] border border-gray-100 rounded-xl focus:outline-none" />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-gray-700">Nama Bank <span className="text-red-500">*</span></label>
+              <select required value={orgNamaBank} onChange={(e) => setOrgNamaBank(e.target.value)} className="w-full px-4 py-3 text-xs bg-[#f8fafc] border border-gray-100 rounded-xl focus:outline-none">
+                <option value="">Pilih Bank</option>
+                <option value="BCA">BCA</option>
+                <option value="Mandiri">Mandiri</option>
+                <option value="BRI">BRI</option>
+                <option value="BNI">BNI</option>
+                <option value="BSI">BSI (Bank Syariah Indonesia)</option>
+                <option value="CIMB Niaga">CIMB Niaga</option>
+                <option value="Danamon">Danamon</option>
+                <option value="Permata">Permata</option>
+                <option value="Panin">Panin</option>
+                <option value="Lainnya">Lainnya</option>
+              </select>
             </div>
             <div className="space-y-1">
               <label className="text-xs font-bold text-gray-700">Nomor Rekening <span className="text-red-500">*</span></label>

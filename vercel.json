@@ -4,21 +4,18 @@
   "outputDirectory": "dist",
   "framework": "vite",
   "functions": {
-    "backend/dist/main.js": {
+    "api/index.js": {
       "maxDuration": 30
     }
   },
-  "routes": [
+  "rewrites": [
     {
-      "src": "/api/(.*)",
-      "dest": "/backend/dist/main.js"
+      "source": "/api/:path*",
+      "destination": "/api/index.js"
     },
     {
-      "handle": "filesystem"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/index.html"
+      "source": "/((?!api/).*)",
+      "destination": "/index.html"
     }
   ]
 }

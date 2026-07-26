@@ -103,7 +103,7 @@ export default function App() {
   };
 
   const handleApproveUser = async (userId: number) => {
-    await api.updateUserStatus(userId, 'Terverifikasi');
+    await api.updateUserStatus(userId, 'Aktif');
     const users = await api.getUsers();
     setAllUsers(users);
   };
@@ -121,13 +121,13 @@ export default function App() {
   };
 
   const handleApprovePayment = async (txId: number) => {
-    await api.verifyTransaction(txId, 'verified');
+    await api.verifyTransaction(txId, 'Diverifikasi');
     const txs = await api.getTransactions();
     setTransactions(txs);
   };
 
   const handleRejectPayment = async (txId: number) => {
-    await api.verifyTransaction(txId, 'rejected');
+    await api.verifyTransaction(txId, 'Ditolak');
     const txs = await api.getTransactions();
     setTransactions(txs);
   };
@@ -148,7 +148,7 @@ export default function App() {
       <div className="flex-1 flex overflow-hidden">
         <main className="flex-1 overflow-y-auto">
           {currentUser ? (
-            currentUser.peran === 'organisasi' ? (
+            currentUser.peran === 'Organisasi' ? (
               <OrganizationDashboard
                 currentUser={currentUser}
                 events={events}
@@ -160,7 +160,7 @@ export default function App() {
                 onUploadDoc={handleUploadDoc}
                 onLogout={handleLogout}
               />
-            ) : currentUser.peran === 'sponsor' ? (
+            ) :             currentUser.peran === 'Sponsor' ? (
               <SponsorDashboard
                 currentUser={currentUser}
                 events={events}

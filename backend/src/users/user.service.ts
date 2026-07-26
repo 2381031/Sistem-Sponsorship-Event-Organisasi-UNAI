@@ -22,16 +22,16 @@ export class UserService {
       );
       const user = userResult.rows[0];
 
-      if (dto.peran === 'organisasi' && dto.organisasiDetails) {
+      if (dto.peran === 'Organisasi' && dto.organisasiDetails) {
         await client.query(
-          `INSERT INTO organisasi (id_pengguna, nama_organisasi, deskripsi, no_telp, nama_rekening, nomor_rekening)
-           VALUES ($1, $2, $3, $4, $5, $6)`,
+          `INSERT INTO organisasi (id_pengguna, nama_organisasi, deskripsi, no_telp, nama_bank, nama_rekening, nomor_rekening)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)`,
           [user.id_pengguna, dto.organisasiDetails.nama_organisasi, dto.organisasiDetails.deskripsi || null,
-           dto.organisasiDetails.no_telp, dto.organisasiDetails.nama_rekening, dto.organisasiDetails.nomor_rekening],
+           dto.organisasiDetails.no_telp, dto.organisasiDetails.nama_bank, dto.organisasiDetails.nama_rekening, dto.organisasiDetails.nomor_rekening],
         );
       }
 
-      if (dto.peran === 'sponsor' && dto.sponsorDetails) {
+      if (dto.peran === 'Sponsor' && dto.sponsorDetails) {
         await client.query(
           `INSERT INTO sponsor (id_pengguna, nama_perusahaan, alamat, no_telp)
            VALUES ($1, $2, $3, $4)`,
@@ -65,7 +65,7 @@ export class UserService {
     const result = await pool.query(
       `SELECT u.id_pengguna as id, u.email, u.peran, u.status_akun,
               o.nama_organisasi, o.no_telp as org_no_telp, o.deskripsi as org_deskripsi,
-              o.nama_rekening, o.nomor_rekening,
+              o.nama_bank, o.nama_rekening, o.nomor_rekening,
               s.nama_perusahaan, s.alamat, s.no_telp as spon_no_telp
        FROM users u
        LEFT JOIN organisasi o ON u.id_pengguna = o.id_pengguna
@@ -78,9 +78,9 @@ export class UserService {
       email: r.email,
       peran: r.peran,
       status_akun: r.status_akun,
-      profil: r.peran === 'organisasi'
-        ? { nama_organisasi: r.nama_organisasi, deskripsi: r.org_deskripsi, no_telp: r.org_no_telp, nama_rekening: r.nama_rekening, nomor_rekening: r.nomor_rekening }
-        : r.peran === 'sponsor'
+      profil: r.peran === 'Organisasi'
+        ? { nama_organisasi: r.nama_organisasi, deskripsi: r.org_deskripsi, no_telp: r.org_no_telp, nama_bank: r.nama_bank, nama_rekening: r.nama_rekening, nomor_rekening: r.nomor_rekening }
+        : r.peran === 'Sponsor'
           ? { nama_perusahaan: r.nama_perusahaan, alamat: r.alamat, no_telp: r.spon_no_telp }
           : null,
     }));
@@ -89,10 +89,10 @@ export class UserService {
   async findByIdWithProfile(id: number) {
     const user = await this.findById(id);
     let profil: any = null;
-    if (user.peran === 'organisasi') {
+    if (user.peran === 'Organisasi') {
       const r = await pool.query('SELECT * FROM organisasi WHERE id_pengguna = $1', [user.id_pengguna]);
       if (r.rows[0]) profil = r.rows[0];
-    } else if (user.peran === 'sponsor') {
+    } else if (user.peran === 'Sponsor') {
       const r = await pool.query('SELECT * FROM sponsor WHERE id_pengguna = $1', [user.id_pengguna]);
       if (r.rows[0]) profil = r.rows[0];
     }
@@ -120,17 +120,18 @@ export class UserService {
           [dto.email || user.email, dto.peran || user.peran, id]);
       }
 
-      if (dto.organisasiDetails && user.peran === 'organisasi') {
+      if (dto.organisasiDetails && user.peran === 'Organisasi') {
         await client.query(
-          `UPDATE organisasi SET nama_organisasi = $1, deskripsi = $2, no_telp = $3, nama_rekening = $4, nomor_rekening = $5
-           WHERE id_pengguna = $6`,
+          `UPDATE organisasi SET nama_organisasi = $1, deskripsi = $2, no_telp = $3, nama_bank = $4, nama_rekening = $5, nomor_rekening = $6
+           WHERE id_pengguna = $7`,
           [dto.organisasiDetails.nama_organisasi, dto.organisasiDetails.deskripsi || null,
-           dto.organisasiDetails.no_telp, dto.organisasiDetails.nama_rekening,
+           dto.organisasiDetails.no_telp, dto.organisasiDetails.nama_bank,
+           dto.organisasiDetails.nama_rekening,
            dto.organisasiDetails.nomor_rekening, id],
         );
       }
 
-      if (dto.sponsorDetails && user.peran === 'sponsor') {
+      if (dto.sponsorDetails && user.peran === 'Sponsor') {
         await client.query(
           `UPDATE sponsor SET nama_perusahaan = $1, alamat = $2, no_telp = $3 WHERE id_pengguna = $4`,
           [dto.sponsorDetails.nama_perusahaan, dto.sponsorDetails.alamat || null, dto.sponsorDetails.no_telp, id],

@@ -30,6 +30,7 @@ export default function OrganizationDashboard({
   const [profileNoTelp, setProfileNoTelp] = useState(profil?.no_telp || '');
   const [profileRekNo, setProfileRekNo] = useState(profil?.nomor_rekening || '');
   const [profileRekNama, setProfileRekNama] = useState(profil?.nama_rekening || '');
+  const [profileNamaBank, setProfileNamaBank] = useState(profil?.nama_bank || '');
   const [profileSuccess, setProfileSuccess] = useState('');
   const [profileLoading, setProfileLoading] = useState(false);
 
@@ -53,7 +54,7 @@ export default function OrganizationDashboard({
   const myEventIds = myEvents.map(e => e.id_event);
   const totalEvents = myEvents.length;
 
-  const myApprovedTransactions = transactions.filter(t => myEventIds.includes(t.id_event) && t.status_pembayaran === 'verified');
+  const myApprovedTransactions = transactions.filter(t => myEventIds.includes(t.id_event) && t.status_pembayaran === 'Diverifikasi');
   const totalDanaTerkumpul = myApprovedTransactions.reduce((acc, t) => acc + t.jumlah, 0);
   const totalTargetDana = myEvents.reduce((acc, e) => acc + e.target_dana, 0);
 
@@ -68,6 +69,7 @@ export default function OrganizationDashboard({
           nama_organisasi: profileNama,
           deskripsi: profileDeskripsi,
           no_telp: profileNoTelp,
+          nama_bank: profileNamaBank,
           nama_rekening: profileRekNama,
           nomor_rekening: profileRekNo,
         },
@@ -110,7 +112,7 @@ export default function OrganizationDashboard({
           deskripsi: deskripsiEvent,
           target_dana: targetDana,
           url_proposal: proposalFile || null,
-          status_event: 'open',
+          status_event: 'Dipublikasikan',
           paket_tersedia: customPackages,
         });
         setCreateSuccess('Event berhasil diterbitkan!');
@@ -130,7 +132,7 @@ export default function OrganizationDashboard({
   };
 
   const handleToggleEventStatus = async (event: Event) => {
-    const newStatus = event.status_event === 'open' ? 'closed' : 'open';
+    const newStatus = event.status_event === 'Dipublikasikan' ? 'Ditutup' : 'Dipublikasikan';
     await onUpdateEventStatus(event.id_event, newStatus);
   };
 
@@ -140,7 +142,7 @@ export default function OrganizationDashboard({
     await onUploadDoc({
       id_event: uploadingDocEventId,
       url_file: docFileUrl.replace('C:\\fakepath\\', ''),
-      tipe_file: 'pdf',
+      tipe_file: 'PDF',
     });
     setDocSuccess('LPJ berhasil diunggah!');
     setTimeout(() => { setDocSuccess(''); setUploadingDocEventId(null); setDocFileUrl(''); setDocDesc(''); }, 2000);
@@ -213,7 +215,7 @@ export default function OrganizationDashboard({
 
             {myEvents.map(event => {
               const eventTxs = transactions.filter(t => t.id_event === event.id_event);
-              const eventApprovedTxs = eventTxs.filter(t => t.status_pembayaran === 'verified');
+              const eventApprovedTxs = eventTxs.filter(t => t.status_pembayaran === 'Diverifikasi');
               const eventCollected = eventApprovedTxs.reduce((sum, t) => sum + t.jumlah, 0);
               const progressPct = event.target_dana > 0 ? Math.min(100, Math.round((eventCollected / event.target_dana) * 100)) : 0;
               return (
@@ -250,13 +252,13 @@ export default function OrganizationDashboard({
             <div className="space-y-4">
               {myEvents.map(event => {
                 const eventTxs = transactions.filter(t => t.id_event === event.id_event);
-                const eventApprovedTxs = eventTxs.filter(t => t.status_pembayaran === 'verified');
+                const eventApprovedTxs = eventTxs.filter(t => t.status_pembayaran === 'Diverifikasi');
                 const eventCollected = eventApprovedTxs.reduce((sum, t) => sum + t.jumlah, 0);
                 return (
                   <div key={event.id_event} className="bg-white rounded-3xl border border-gray-100 p-5 shadow-sm space-y-4">
                     <div className="flex justify-between items-start">
                       <div><h3 className="text-sm font-bold text-[#1a2c4d]">{event.nama_event}</h3><p className="text-[10px] text-gray-400">{event.tanggal_event}</p></div>
-                      <span className={`px-2 py-0.5 text-[9px] font-bold rounded ${event.status_event === 'open' ? 'bg-[#e2f6ec] text-[#2ebd7d]' : 'bg-red-50 text-red-600'}`}>{event.status_event === 'open' ? 'OPEN' : 'CLOSED'}</span>
+                      <span className={`px-2 py-0.5 text-[9px] font-bold rounded ${event.status_event === 'Dipublikasikan' ? 'bg-[#e2f6ec] text-[#2ebd7d]' : 'bg-red-50 text-red-600'}`}>{event.status_event === 'Dipublikasikan' ? 'DIPUBLIKASIKAN' : 'DITUTUP'}</span>
                     </div>
                     <div className="grid grid-cols-2 gap-3 border-t border-gray-50 pt-3">
                       <div><p className="text-[9px] text-gray-400 font-bold">Total Dana</p><h5 className="text-xs font-bold text-[#1a2c4d]">{formatIDR(eventCollected)}</h5></div>
@@ -281,8 +283,8 @@ export default function OrganizationDashboard({
                         <Edit3 className="h-3.5 w-3.5" /> Edit
                       </button>
                       <button onClick={() => handleToggleEventStatus(event)}
-                        className={`py-2.5 font-bold text-[11px] rounded-xl border flex items-center justify-center gap-1.5 ${event.status_event === 'open' ? 'bg-[#fff5f5] text-[#e53e3e] border-[#fed7d7]' : 'bg-emerald-50 text-emerald-600 border-emerald-100'}`}>
-                        <CheckCircle className="h-3.5 w-3.5" /> {event.status_event === 'open' ? 'Tutup Event' : 'Buka Event'}
+                        className={`py-2.5 font-bold text-[11px] rounded-xl border flex items-center justify-center gap-1.5 ${event.status_event === 'Dipublikasikan' ? 'bg-[#fff5f5] text-[#e53e3e] border-[#fed7d7]' : 'bg-emerald-50 text-emerald-600 border-emerald-100'}`}>
+                        <CheckCircle className="h-3.5 w-3.5" /> {event.status_event === 'Dipublikasikan' ? 'Tutup Event' : 'Buka Event'}
                       </button>
                     </div>
                   </div>
@@ -345,6 +347,20 @@ export default function OrganizationDashboard({
                 <input type="text" required value={profileNoTelp} onChange={(e) => setProfileNoTelp(e.target.value)} className="w-full px-4 py-3 text-xs bg-white border border-gray-100 rounded-xl focus:outline-none" /></div>
               <div className="space-y-1"><label className="text-xs font-bold text-gray-700">Nomor Rekening <span className="text-red-500">*</span></label>
                 <input type="text" required value={profileRekNo} onChange={(e) => setProfileRekNo(e.target.value)} className="w-full px-4 py-3 text-xs bg-white border border-gray-100 rounded-xl focus:outline-none" /></div>
+              <div className="space-y-1"><label className="text-xs font-bold text-gray-700">Nama Bank <span className="text-red-500">*</span></label>
+                <select required value={profileNamaBank} onChange={(e) => setProfileNamaBank(e.target.value)} className="w-full px-4 py-3 text-xs bg-white border border-gray-100 rounded-xl focus:outline-none">
+                  <option value="">Pilih Bank</option>
+                  <option value="BCA">BCA</option>
+                  <option value="Mandiri">Mandiri</option>
+                  <option value="BRI">BRI</option>
+                  <option value="BNI">BNI</option>
+                  <option value="BSI">BSI (Bank Syariah Indonesia)</option>
+                  <option value="CIMB Niaga">CIMB Niaga</option>
+                  <option value="Danamon">Danamon</option>
+                  <option value="Permata">Permata</option>
+                  <option value="Panin">Panin</option>
+                  <option value="Lainnya">Lainnya</option>
+                </select></div>
               <div className="space-y-1"><label className="text-xs font-bold text-gray-700">Atas Nama Rekening <span className="text-red-500">*</span></label>
                 <input type="text" required value={profileRekNama} onChange={(e) => setProfileRekNama(e.target.value)} className="w-full px-4 py-3 text-xs bg-white border border-gray-100 rounded-xl focus:outline-none" /></div>
               <button type="submit" disabled={profileLoading} className="w-full py-3 bg-[#1a2c4d] hover:bg-[#15233e] text-white font-bold text-xs rounded-xl transition-all shadow-md mt-4 disabled:opacity-50">

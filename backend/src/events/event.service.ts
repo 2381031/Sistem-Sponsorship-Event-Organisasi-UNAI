@@ -13,9 +13,11 @@ export class EventService {
     status_event?: string;
     paket_tersedia?: Array<{ nama_paket: string; persentase_dana: number; deskripsi_keuntungan?: string }>;
   }) {
-    const orgResult = await pool.query('SELECT id_organisasi FROM organisasi WHERE id_pengguna = $1', [data.id_pengguna]);
+    const orgResult = await pool.query('SELECT id_pengguna FROM organisasi WHERE id_pengguna = $1', [data.id_pengguna]);
     if (orgResult.rows.length === 0) throw new BadRequestException('Profil organisasi tidak ditemukan');
-    const idOrganisasi = orgResult.rows[0].id_organisasi;
+
+    const orgIdResult = await pool.query('SELECT id_organisasi FROM organisasi WHERE id_pengguna = $1', [data.id_pengguna]);
+    const idOrganisasi = orgIdResult.rows[0].id_organisasi;
 
     const client = await pool.connect();
     try {
@@ -26,7 +28,7 @@ export class EventService {
          VALUES ($1, $2, $3, $4, $5, $6, $7)
          RETURNING *`,
         [idOrganisasi, data.nama_event, data.tanggal_event,
-         data.deskripsi || null, data.target_dana, data.url_proposal || null, data.status_event || 'open'],
+         data.deskripsi || null, data.target_dana, data.url_proposal || null, data.status_event || 'Dipublikasikan'],
       );
       const event = evResult.rows[0];
 

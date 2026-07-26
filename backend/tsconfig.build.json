@@ -6,5 +6,5 @@
     "removeComments": true,
     "outDir": "dist"
   },
-  "exclude": ["**/*.spec.ts", "node_modules", "test", "dist"]
+  "exclude": ["**/*.spec.ts", "node_modules", "test", "dist", "src/migrate-schema.ts"]
 }
