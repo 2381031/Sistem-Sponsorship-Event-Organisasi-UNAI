@@ -1,6 +1,6 @@
 {
   "installCommand": "npm install && cd backend && npm install",
-  "buildCommand": "cd backend && npm run build && cd .. && npx esbuild backend/dist/main.js --bundle --platform=node --format=cjs --outfile=api/_backend.js --minify --external:@nestjs/websockets --external:@nestjs/microservices && npm run build",
+  "buildCommand": "npm run --prefix backend build && npx esbuild backend/dist/main.js --bundle --platform=node --format=cjs --outfile=api/_backend.js --minify --external:@nestjs/websockets --external:@nestjs/microservices && npm run build",
   "outputDirectory": "dist",
   "framework": "vite",
   "functions": {
