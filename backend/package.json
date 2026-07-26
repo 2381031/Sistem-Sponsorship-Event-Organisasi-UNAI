@@ -5,6 +5,7 @@
   "scripts": {
     "start": "node dist/main.js",
     "build": "tsc -p tsconfig.build.json",
+    "bundle": "tsc -p tsconfig.build.json && esbuild dist/main.js --bundle --platform=node --format=cjs --outfile=../api/_backend.js --minify --external:@nestjs/websockets --external:@nestjs/microservices",
     "start:dev": "tsc -p tsconfig.build.json && node dist/main.js",
     "lint": "tsc -p tsconfig.build.json --noEmit"
   },
@@ -24,6 +25,7 @@
     "reflect-metadata": "^0.1.13"
   },
   "devDependencies": {
+    "esbuild": "^0.25.0",
     "@nestjs/cli": "^11.0.24",
     "@swc/core": "^1.15.46",
     "@types/bcryptjs": "^2.4.6",
