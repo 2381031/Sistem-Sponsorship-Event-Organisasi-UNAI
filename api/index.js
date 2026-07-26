@@ -1,2 +1,2 @@
-const main = require('../backend/dist/main.js');
-module.exports = main.default;
+const mod = require('./_backend.js');
+module.exports = mod.default || mod;
