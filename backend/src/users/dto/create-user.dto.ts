@@ -1,5 +1,4 @@
 import { IsEmail, IsEnum, IsObject, IsOptional, IsString, MinLength } from 'class-validator';
-import { Role } from '../../common/enums/role.enum.js';
 
 export class CreateUserDto {
   @IsEmail()
@@ -12,12 +11,8 @@ export class CreateUserDto {
   @IsString()
   nama_lengkap!: string;
 
-  @IsEnum(Role)
-  peran!: Role;
-
-  @IsOptional()
-  @IsString()
-  status_akun?: string;
+  @IsEnum(['organisasi', 'sponsor', 'admin'] as const)
+  peran!: string;
 
   @IsOptional()
   @IsObject()
@@ -25,7 +20,8 @@ export class CreateUserDto {
     nama_organisasi: string;
     deskripsi?: string;
     no_telp: string;
-    alamat?: string;
+    nama_rekening: string;
+    nomor_rekening: string;
   };
 
   @IsOptional()
@@ -34,8 +30,5 @@ export class CreateUserDto {
     nama_perusahaan: string;
     alamat?: string;
     no_telp: string;
-    is_alumni: boolean;
-    angkatan?: string;
-    deskripsi?: string;
   };
 }

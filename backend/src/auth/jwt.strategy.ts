@@ -1,19 +1,19 @@
-import { Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  constructor(configService: ConfigService) {
+  constructor() {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: configService.get<string>('JWT_SECRET') || 'default-secret',
+      secretOrKey: process.env.JWT_SECRET || 'unai-sponsorship-secret-2026',
     });
   }
 
   async validate(payload: any) {
-    return payload;
+    if (!payload.sub) throw new UnauthorizedException('Token tidak valid');
+    return { id_pengguna: payload.sub, email: payload.email, peran: payload.role };
   }
 }

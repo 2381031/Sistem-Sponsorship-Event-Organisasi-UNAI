@@ -5,6 +5,10 @@
   "framework": "vite",
   "routes": [
     {
+      "src": "/api/(.*)",
+      "dest": "/backend/src/main.ts"
+    },
+    {
       "handle": "filesystem"
     },
     {

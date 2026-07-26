@@ -1,24 +1,13 @@
-import { Body, Controller, Get, Param, Patch, Post, UsePipes, ValidationPipe } from '@nestjs/common';
-import { CreateUserDto } from './dto/create-user.dto.js';
-import { UpdateUserDto } from './dto/update-user.dto.js';
+import {
+  Body, Controller, Get, Param, Patch, Delete,
+  UseGuards, Request, ParseIntPipe,
+} from '@nestjs/common';
 import { UserService } from './user.service.js';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
 
 @Controller('users')
 export class UserController {
   constructor(private readonly userService: UserService) {}
-
-  @Post()
-  @UsePipes(new ValidationPipe({ whitelist: true }))
-  async create(@Body() createUserDto: CreateUserDto) {
-    const user = await this.userService.create(createUserDto);
-    return user;
-  }
-
-  @Patch(':id')
-  @UsePipes(new ValidationPipe({ whitelist: true, skipMissingProperties: true }))
-  async update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
-    return this.userService.update(id, updateUserDto);
-  }
 
   @Get()
   async findAll() {
@@ -26,7 +15,26 @@ export class UserController {
   }
 
   @Get(':id')
-  async findOne(@Param('id') id: string) {
-    return this.userService.findOne(id);
+  async findOne(@Param('id', ParseIntPipe) id: number) {
+    return this.userService.findByIdWithProfile(id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch(':id')
+  async update(@Param('id', ParseIntPipe) id: number, @Body() body: any) {
+    return this.userService.update(id, body);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch(':id/status')
+  async updateStatus(@Param('id', ParseIntPipe) id: number, @Body('status') status: string, @Request() req: any) {
+    return this.userService.updateStatus(id, status, req.user.id_pengguna);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete(':id')
+  async delete(@Param('id', ParseIntPipe) id: number) {
+    await this.userService.delete(id);
+    return { message: 'User deleted' };
   }
 }

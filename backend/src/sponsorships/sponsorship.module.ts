@@ -1,12 +1,10 @@
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { Sponsorship } from './sponsorship.entity.js';
-import { SponsorshipController } from './sponsorship.controller.js';
-import { SponsorshipService } from './sponsorship.service.js';
+import { TransaksiController } from './sponsorship.controller.js';
+import { TransaksiService } from './transaksi.service.js';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Sponsorship])],
-  controllers: [SponsorshipController],
-  providers: [SponsorshipService],
+  controllers: [TransaksiController],
+  providers: [TransaksiService],
+  exports: [TransaksiService],
 })
 export class SponsorshipModule {}

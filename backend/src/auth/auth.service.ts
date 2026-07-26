@@ -1,8 +1,10 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { UserService } from '../users/user.service.js';
 import { LoginUserDto } from './dto/login-user.dto.js';
+import { CreateUserDto } from '../users/dto/create-user.dto.js';
+import pool from '../database.js';
 
 @Injectable()
 export class AuthService {
@@ -11,35 +13,50 @@ export class AuthService {
     private readonly jwtService: JwtService,
   ) {}
 
-  async validateUser(loginUserDto: LoginUserDto) {
-    const user = await this.userService.findByEmail(loginUserDto.email);
-    if (!user) throw new UnauthorizedException('Invalid credentials');
+  async register(dto: CreateUserDto) {
+    const existing = await this.userService.findByEmail(dto.email);
+    if (existing) throw new ConflictException('Email sudah terdaftar');
 
-    const passwordMatches = await bcrypt.compare(loginUserDto.password, user.password);
-    if (!passwordMatches) throw new UnauthorizedException('Invalid credentials');
-
-    if (user.status_akun === 'pending') {
-      throw new UnauthorizedException('Akun belum terverifikasi');
-    }
-    if (user.status_akun === 'rejected') {
-      throw new UnauthorizedException('Akun ditolak oleh administrator');
-    }
-
-    return user;
+    const user = await this.userService.create(dto);
+    return {
+      message: 'Pendaftaran berhasil! Menunggu verifikasi admin.',
+      user: { id: user.id_pengguna, email: user.email, peran: user.peran, status_akun: user.status_akun },
+    };
   }
 
-  async login(user: any) {
-    const payload = { sub: user.id, email: user.email, role: user.peran };
+  async login(dto: LoginUserDto) {
+    const user = await this.userService.findByEmail(dto.email);
+    if (!user) throw new UnauthorizedException('Email atau password salah');
+
+    const passwordMatches = await bcrypt.compare(dto.password, user.kata_sandi);
+    if (!passwordMatches) throw new UnauthorizedException('Email atau password salah');
+
+    if (user.status_akun === 'Menunggu Verifikasi')
+      throw new UnauthorizedException('Akun belum terverifikasi');
+
+    if (user.status_akun === 'Ditolak')
+      throw new UnauthorizedException('Akun ditolak oleh administrator');
+
+    const payload = { sub: user.id_pengguna, email: user.email, role: user.peran };
+    const accessToken = this.jwtService.sign(payload);
+
+    let profilDetail: any = null;
+    if (user.peran === 'organisasi') {
+      const r = await pool.query('SELECT * FROM organisasi WHERE id_pengguna = $1', [user.id_pengguna]);
+      if (r.rows[0]) profilDetail = r.rows[0];
+    } else if (user.peran === 'sponsor') {
+      const r = await pool.query('SELECT * FROM sponsor WHERE id_pengguna = $1', [user.id_pengguna]);
+      if (r.rows[0]) profilDetail = r.rows[0];
+    }
+
     return {
-      accessToken: this.jwtService.sign(payload),
+      accessToken,
       user: {
-        id: user.id,
+        id: user.id_pengguna,
         email: user.email,
-        nama_lengkap: user.nama_lengkap,
         peran: user.peran,
         status_akun: user.status_akun,
-        organisasiDetails: user.organisasiDetails,
-        sponsorDetails: user.sponsorDetails,
+        profil: profilDetail,
       },
     };
   }
