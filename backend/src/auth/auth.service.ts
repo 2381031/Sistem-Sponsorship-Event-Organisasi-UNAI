@@ -20,7 +20,7 @@ export class AuthService {
     const user = await this.userService.create(dto);
     return {
       message: 'Pendaftaran berhasil! Menunggu verifikasi admin.',
-      user: { id: user.id_pengguna, email: user.email, peran: user.peran, status_akun: user.status_akun },
+      user: { id: user.id_pengguna, email: user.email, nama_lengkap: user.nama_lengkap, peran: user.peran, status_akun: user.status_akun },
     };
   }
 
@@ -54,6 +54,7 @@ export class AuthService {
       user: {
         id: user.id_pengguna,
         email: user.email,
+        nama_lengkap: user.nama_lengkap,
         peran: user.peran,
         status_akun: user.status_akun,
         profil: profilDetail,

@@ -15,10 +15,10 @@ export class UserService {
       await client.query('BEGIN');
 
       const userResult = await client.query(
-        `INSERT INTO users (email, kata_sandi, peran, status_akun)
-         VALUES ($1, $2, $3, 'Menunggu Verifikasi')
-         RETURNING id_pengguna, email, peran, status_akun`,
-        [dto.email, hashedPassword, dto.peran],
+        `INSERT INTO users (email, kata_sandi, nama_lengkap, peran, status_akun)
+         VALUES ($1, $2, $3, $4, 'Menunggu Verifikasi')
+         RETURNING id_pengguna, email, nama_lengkap, peran, status_akun`,
+        [dto.email, hashedPassword, dto.nama_lengkap || '', dto.peran],
       );
       const user = userResult.rows[0];
 
@@ -63,7 +63,7 @@ export class UserService {
 
   async findAll() {
     const result = await pool.query(
-      `SELECT u.id_pengguna as id, u.email, u.peran, u.status_akun,
+      `SELECT u.id_pengguna as id, u.email, u.nama_lengkap, u.peran, u.status_akun,
               o.nama_organisasi, o.no_telp as org_no_telp, o.deskripsi as org_deskripsi,
               o.nama_rekening, o.nomor_rekening,
               s.nama_perusahaan, s.alamat, s.no_telp as spon_no_telp
@@ -76,6 +76,7 @@ export class UserService {
     return result.rows.map((r: any) => ({
       id: r.id,
       email: r.email,
+      nama_lengkap: r.nama_lengkap,
       peran: r.peran,
       status_akun: r.status_akun,
       profil: r.peran === 'organisasi'
@@ -96,7 +97,7 @@ export class UserService {
       const r = await pool.query('SELECT * FROM sponsor WHERE id_pengguna = $1', [user.id_pengguna]);
       if (r.rows[0]) profil = r.rows[0];
     }
-    return { id: user.id_pengguna, email: user.email, peran: user.peran, status_akun: user.status_akun, profil };
+    return { id: user.id_pengguna, email: user.email, nama_lengkap: user.nama_lengkap, peran: user.peran, status_akun: user.status_akun, profil };
   }
 
   async updateStatus(id: number, status: string, adminId?: number) {
