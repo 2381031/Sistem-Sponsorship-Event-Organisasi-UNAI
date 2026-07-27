@@ -39,14 +39,14 @@ async function initDatabase() {
     await client.query(schema);
     console.log('Schema berhasil dibuat!');
 
-    const adminPassword = await bcrypt.hash('admin123', 10);
+    const adminPassword = await bcrypt.hash('admin3107', 10);
     await client.query(
       `INSERT INTO users (email, kata_sandi, nama_lengkap, peran, status_akun)
        VALUES ($1, $2, $3, $4, $5)
-       ON CONFLICT (email) DO UPDATE SET kata_sandi = $2`,
-      ['admin@unai.ac.id', adminPassword, 'Administrator', 'admin', 'Terverifikasi'],
+       ON CONFLICT (email) DO UPDATE SET kata_sandi = $2, peran = $4, status_akun = $5`,
+      ['admin@unai.edu', adminPassword, 'Administrator', 'admin', 'Terverifikasi'],
     );
-    console.log('Admin user berhasil dibuat (admin@unai.ac.id / admin123)');
+    console.log('Admin user berhasil dibuat (admin@unai.edu / admin3107)');
 
     client.release();
     console.log('Database berhasil diinisialisasi!');
