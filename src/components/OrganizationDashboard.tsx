@@ -111,6 +111,11 @@ export default function OrganizationDashboard({
           persentase_dana: 15,
           deskripsi_keuntungan: 'Logo eksklusif pada semua media (15%). Dapat menyertakan media promosi, brosur, atau sample produk saat kegiatan. Ucapan penghargaan pada sponsor saat sambutan pembukaan dan penutupan oleh moderator. Mendapatkan hasil dokumentasi kegiatan berupa video dan foto-foto. Publikasi di media elektronik dan cetak UNAI.',
         },
+        {
+          nama_paket: 'Spesial',
+          persentase_dana: 0,
+          deskripsi_keuntungan: 'Bentuk kerjasama finansial dengan kontribusi sukarela dari sponsor. Mendapatkan hasil dokumentasi kegiatan berupa video dan foto-foto. Publikasi di media elektronik dan cetak HIMA dan BEM.',
+        },
       ];
 
       if (editingEvent) {
