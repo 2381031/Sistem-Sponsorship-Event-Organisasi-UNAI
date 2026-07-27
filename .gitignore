@@ -7,3 +7,4 @@ coverage/
 .env*
 !.env.example
 api/_backend.js
+*.tsbuildinfo
