@@ -12,11 +12,12 @@ interface Props {
   events: Event[];
   transactions: SponsorshipTransaction[];
   docs: EventDoc[];
+  allUsers: User[];
   onAddTransaction: (data: any) => Promise<void>;
   onLogout: () => void;
 }
 
-export default function SponsorDashboard({ currentUser, events, transactions, docs, onAddTransaction, onLogout }: Props) {
+export default function SponsorDashboard({ currentUser, events, transactions, docs, allUsers, onAddTransaction, onLogout }: Props) {
   const profil = currentUser.profil;
   const [activeTab, setActiveTab] = useState<'browse' | 'riwayat' | 'profil'>('browse');
   const [currentStep, setCurrentStep] = useState<'list' | 'pilih-paket' | 'bukti-bayar'>('list');
@@ -42,6 +43,11 @@ export default function SponsorDashboard({ currentUser, events, transactions, do
   );
 
   const myTransactions = transactions.filter(t => t.id_sponsor === currentUser.id);
+
+  const getOrgBankDetails = (idOrganisasi: number) => {
+    const orgUser = allUsers.find(u => u.id === idOrganisasi && u.peran === 'Organisasi');
+    return orgUser?.profil || null;
+  };
 
   const formatIDR = (num: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(num);
 
@@ -209,6 +215,20 @@ export default function SponsorDashboard({ currentUser, events, transactions, do
                   <p className="text-xs font-bold text-gray-500">{buktiFile ? buktiFile.replace('C:\\fakepath\\', '') : 'Pilih File bukti transfer'}</p>
                 </div>
               </div>
+              {(() => {
+                const orgBank = getOrgBankDetails(selectedEvent.id_organisasi);
+                if (!orgBank) return null;
+                return (
+                  <div className="bg-[#f0f4f8] rounded-2xl p-4 border border-gray-100 space-y-2">
+                    <p className="text-[10px] text-gray-400 font-bold uppercase">Transfer ke rekening berikut</p>
+                    <div className="grid grid-cols-1 gap-1.5 text-xs">
+                      <div className="flex justify-between"><span className="text-gray-400 font-bold">Bank</span><span className="font-extrabold text-[#1a2c4d]">{orgBank.nama_bank || '-'}</span></div>
+                      <div className="flex justify-between"><span className="text-gray-400 font-bold">No. Rekening</span><span className="font-extrabold text-[#1a2c4d] font-mono">{orgBank.nomor_rekening || '-'}</span></div>
+                      <div className="flex justify-between"><span className="text-gray-400 font-bold">a.n.</span><span className="font-extrabold text-[#1a2c4d]">{orgBank.nama_rekening || '-'}</span></div>
+                    </div>
+                  </div>
+                );
+              })()}
               <div className="grid grid-cols-2 gap-3 pt-2">
                 <button type="button" onClick={() => { setCustomAmount(''); setCurrentStep('pilih-paket'); }} className="py-3 bg-white hover:bg-gray-50 text-gray-500 font-bold text-xs rounded-xl border border-gray-100">Batal</button>
                 <button type="submit" disabled={submitLoading} className="py-3 bg-[#1a2c4d] hover:bg-[#15233e] text-white font-bold text-xs rounded-xl shadow-md disabled:opacity-50">

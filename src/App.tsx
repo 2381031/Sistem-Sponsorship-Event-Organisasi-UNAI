@@ -166,6 +166,7 @@ export default function App() {
                 events={events}
                 transactions={transactions}
                 docs={docs}
+                allUsers={allUsers}
                 onAddTransaction={handleAddTransaction}
                 onLogout={handleLogout}
               />
