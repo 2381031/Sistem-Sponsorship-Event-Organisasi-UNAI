@@ -91,10 +91,31 @@ export default function OrganizationDashboard({
 
     try {
       const customPackages = [
-        { nama_paket: 'Platinum', persentase_dana: 100, deskripsi_keuntungan: 'Sponsor tunggal, logo eksklusif 100%, media promosi, dokumentasi, publikasi' },
-        { nama_paket: 'Gold', persentase_dana: 75, deskripsi_keuntungan: 'Logo 75%, media promosi, dokumentasi, publikasi' },
-        { nama_paket: 'Silver', persentase_dana: 25, deskripsi_keuntungan: 'Logo 25%, media promosi, dokumentasi foto' },
-        { nama_paket: 'Bronze', persentase_dana: 15, deskripsi_keuntungan: 'Logo 15%, publikasi internal, sertifikat digital' },
+        {
+          nama_paket: 'Platinum',
+          persentase_dana: 100,
+          deskripsi_keuntungan: 'Sponsor tunggal kegiatan. Logo eksklusif pada semua media (100%). Dapat menyertakan media promosi/brosur/sample produk saat kegiatan. Ucapan penghargaan saat sambutan pembukaan & penutupan. Mendapatkan dokumentasi video & foto. Publikasi di media elektronik dan cetak.',
+        },
+        {
+          nama_paket: 'Gold',
+          persentase_dana: 75,
+          deskripsi_keuntungan: 'Logo eksklusif pada semua media (75%). Dapat menyertakan media promosi/brosur/sample produk saat kegiatan. Ucapan penghargaan saat sambutan pembukaan & penutupan. Mendapatkan dokumentasi video & foto. Publikasi di media elektronik dan cetak UNAI.',
+        },
+        {
+          nama_paket: 'Silver',
+          persentase_dana: 25,
+          deskripsi_keuntungan: 'Logo eksklusif pada semua media (25%). Dapat menyertakan media promosi/brosur/sample produk saat kegiatan. Ucapan penghargaan saat sambutan pembukaan & penutupan. Mendapatkan dokumentasi video & foto. Publikasi di media elektronik dan cetak UNAI.',
+        },
+        {
+          nama_paket: 'Bronze',
+          persentase_dana: 15,
+          deskripsi_keuntungan: 'Logo eksklusif pada semua media (15%). Dapat menyertakan media promosi/brosur/sample produk saat kegiatan. Ucapan penghargaan saat sambutan pembukaan & penutupan. Mendapatkan dokumentasi video & foto. Publikasi di media elektronik dan cetak UNAI.',
+        },
+        {
+          nama_paket: 'Spesial',
+          persentase_dana: 0,
+          deskripsi_keuntungan: 'Donasi sukarela (sesuai kemampuan sponsor). Mendapatkan dokumentasi kegiatan berupa video & foto. Publikasi di media elektronik dan cetak HIMA dan BEM.',
+        },
       ];
 
       if (editingEvent) {
