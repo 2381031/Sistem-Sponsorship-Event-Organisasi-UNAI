@@ -18,6 +18,9 @@ export class TransaksiController {
       id_paket: body.id_paket,
       jumlah: body.jumlah,
       bukti_pembayaran: body.bukti_pembayaran,
+      nama_event: body.nama_event,
+      nama_sponsor: body.nama_sponsor,
+      nama_paket: body.nama_paket,
     });
   }
 

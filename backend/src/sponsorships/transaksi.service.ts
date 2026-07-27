@@ -9,18 +9,21 @@ export class TransaksiService {
     id_paket: number;
     jumlah: number;
     bukti_pembayaran?: string;
+    nama_event?: string;
+    nama_sponsor?: string;
+    nama_paket?: string;
   }) {
-    const sponsorResult = await pool.query('SELECT id_sponsor FROM sponsor WHERE id_pengguna = $1', [data.id_pengguna]);
+    const sponsorResult = await pool.query('SELECT id_pengguna FROM sponsor WHERE id_pengguna = $1', [data.id_pengguna]);
     if (sponsorResult.rows.length === 0) throw new BadRequestException('Profil sponsor tidak ditemukan');
-    const idSponsor = sponsorResult.rows[0].id_sponsor;
 
     const result = await pool.query(
       `INSERT INTO transaksi_sponsorship
-       (id_event, id_sponsor, id_paket, jumlah, bukti_pembayaran, status_pembayaran)
-       VALUES ($1, $2, $3, $4, $5, 'Menunggu')
+       (id_event, id_sponsor, id_paket, jumlah, bukti_pembayaran, status_pembayaran, nama_event, nama_sponsor, nama_paket)
+       VALUES ($1, $2, $3, $4, $5, 'Menunggu', $6, $7, $8)
        RETURNING *`,
-      [data.id_event, idSponsor, data.id_paket, data.jumlah,
-       data.bukti_pembayaran || null],
+      [data.id_event, data.id_pengguna, data.id_paket, data.jumlah,
+       data.bukti_pembayaran || null,
+       data.nama_event || null, data.nama_sponsor || null, data.nama_paket || null],
     );
     return result.rows[0];
   }
@@ -31,11 +34,8 @@ export class TransaksiService {
   }
 
   async findBySponsor(idPengguna: number) {
-    const sponsorResult = await pool.query('SELECT id_sponsor FROM sponsor WHERE id_pengguna = $1', [idPengguna]);
-    if (sponsorResult.rows.length === 0) return [];
-    const idSponsor = sponsorResult.rows[0].id_sponsor;
     const result = await pool.query(
-      'SELECT * FROM transaksi_sponsorship WHERE id_sponsor = $1 ORDER BY id_transaksi DESC', [idSponsor],
+      'SELECT * FROM transaksi_sponsorship WHERE id_sponsor = $1 ORDER BY id_transaksi DESC', [idPengguna],
     );
     return result.rows;
   }
