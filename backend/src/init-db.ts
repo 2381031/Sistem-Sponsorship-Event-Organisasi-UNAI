@@ -44,7 +44,7 @@ async function initDatabase() {
       `INSERT INTO users (email, kata_sandi, nama_lengkap, peran, status_akun)
        VALUES ($1, $2, $3, $4, $5)
        ON CONFLICT (email) DO UPDATE SET kata_sandi = $2, peran = $4, status_akun = $5`,
-      ['admin@unai.edu', adminPassword, 'Administrator', 'admin', 'Terverifikasi'],
+      ['admin@unai.edu', adminPassword, 'Administrator', 'Admin', 'Terverifikasi'],
     );
     console.log('Admin user berhasil dibuat (admin@unai.edu / admin3107)');
 

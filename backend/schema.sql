@@ -11,7 +11,7 @@ CREATE TABLE users (
   email VARCHAR(255) UNIQUE NOT NULL,
   kata_sandi VARCHAR(255) NOT NULL,
   nama_lengkap VARCHAR(255) DEFAULT '',
-  peran VARCHAR(50) NOT NULL CHECK (peran IN ('organisasi', 'sponsor', 'admin')),
+  peran VARCHAR(50) NOT NULL CHECK (peran IN ('Organisasi', 'Sponsor', 'Admin')),
   status_akun VARCHAR(50) DEFAULT 'Menunggu Verifikasi',
   id_admin_verifikator INTEGER
 );
