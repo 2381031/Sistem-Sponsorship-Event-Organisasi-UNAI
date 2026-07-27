@@ -21,6 +21,7 @@ CREATE TABLE organisasi (
   nama_organisasi VARCHAR(255) NOT NULL,
   deskripsi TEXT,
   no_telp VARCHAR(50),
+  nama_bank VARCHAR(255),
   nama_rekening VARCHAR(255),
   nomor_rekening VARCHAR(100)
 );

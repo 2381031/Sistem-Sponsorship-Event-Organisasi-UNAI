@@ -15,10 +15,10 @@ export class UserService {
       await client.query('BEGIN');
 
       const userResult = await client.query(
-        `INSERT INTO users (email, kata_sandi, peran, status_akun)
-         VALUES ($1, $2, $3, 'Menunggu Verifikasi')
-         RETURNING id_pengguna, email, peran, status_akun`,
-        [dto.email, hashedPassword, dto.peran],
+        `INSERT INTO users (email, kata_sandi, nama_lengkap, peran, status_akun)
+         VALUES ($1, $2, $3, $4, 'Menunggu Verifikasi')
+         RETURNING id_pengguna, email, nama_lengkap, peran, status_akun`,
+        [dto.email, hashedPassword, dto.nama_lengkap || '', dto.peran],
       );
       const user = userResult.rows[0];
 
