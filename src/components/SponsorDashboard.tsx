@@ -28,7 +28,6 @@ export default function SponsorDashboard({ currentUser, events, transactions, do
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [submitLoading, setSubmitLoading] = useState(false);
-  const [customAmount, setCustomAmount] = useState('');
 
   const [profileNama, setProfileNama] = useState(profil?.nama_perusahaan || '');
   const [profileEmail, setProfileEmail] = useState(currentUser.email);
@@ -69,23 +68,20 @@ export default function SponsorDashboard({ currentUser, events, transactions, do
     setErrorMsg('');
     if (!buktiFile) { setErrorMsg('Pilih file bukti transfer.'); return; }
     if (!selectedEvent || !selectedPackage) return;
-    if (selectedPackage.persentase_dana === 0 && (!customAmount || Number(customAmount) <= 0)) { setErrorMsg('Masukkan jumlah donasi.'); return; }
     setSubmitLoading(true);
 
     try {
       await onAddTransaction({
         id_event: selectedEvent.id_event,
         id_paket: selectedPackage.id_paket,
-        jumlah: selectedPackage.persentase_dana > 0
-          ? selectedEvent.target_dana * (selectedPackage.persentase_dana / 100)
-          : Number(customAmount) || 0,
+        jumlah: selectedEvent.target_dana * (selectedPackage.persentase_dana / 100),
         bukti_pembayaran: buktiFile.replace('C:\\fakepath\\', ''),
         nama_event: selectedEvent.nama_event,
         nama_sponsor: profileNama,
         nama_paket: selectedPackage.nama_paket,
       });
       setSuccessMsg('Bukti transfer berhasil dikirim! Menunggu verifikasi admin.');
-      setTimeout(() => { setSuccessMsg(''); setCurrentStep('list'); setActiveTab('riwayat'); setBuktiFile(''); setCustomAmount(''); setSelectedPackage(null); setSelectedEvent(null); }, 2500);
+      setTimeout(() => { setSuccessMsg(''); setCurrentStep('list'); setActiveTab('riwayat'); setBuktiFile(''); setSelectedPackage(null); setSelectedEvent(null); }, 2500);
     } catch (err: any) { setErrorMsg(err.message); }
     finally { setSubmitLoading(false); }
   };
@@ -168,7 +164,7 @@ export default function SponsorDashboard({ currentUser, events, transactions, do
                     className={`bg-white rounded-3xl p-5 border cursor-pointer transition-all space-y-3 ${disabled ? 'opacity-60 cursor-not-allowed' : ''} ${isSelected ? 'border-yellow-400 ring-2 ring-yellow-400/20' : 'border-gray-100'}`}>
                     <div className="flex justify-between items-start">
                       <div><h4 className="text-sm font-extrabold text-slate-800">{pkg.nama_paket}</h4>
-                        <h5 className="text-lg font-extrabold text-[#1a2c4d] mt-1.5">{pkg.persentase_dana > 0 ? formatIDR(selectedEvent.target_dana * (pkg.persentase_dana / 100)) : 'Sukarela'}</h5></div>
+                        <h5 className="text-lg font-extrabold text-[#1a2c4d] mt-1.5">{formatIDR(selectedEvent.target_dana * (pkg.persentase_dana / 100))}</h5></div>
                       <div className={`h-5 w-5 rounded-full border flex items-center justify-center ${isSelected ? 'border-yellow-500 bg-yellow-500 text-white' : 'border-gray-300'}`}>
                         {isSelected && <Check className="h-3 w-3 stroke-[3]" />}
                       </div>
@@ -188,7 +184,7 @@ export default function SponsorDashboard({ currentUser, events, transactions, do
 
         {activeTab === 'browse' && currentStep === 'bukti-bayar' && selectedEvent && selectedPackage && (
           <div className="space-y-6">
-            <button onClick={() => { setCustomAmount(''); setCurrentStep('pilih-paket'); }} className="flex items-center gap-2 text-gray-500 hover:text-gray-800 text-sm font-medium">
+            <button onClick={() => setCurrentStep('pilih-paket')} className="flex items-center gap-2 text-gray-500 hover:text-gray-800 text-sm font-medium">
               <ArrowLeft className="h-4 w-4" /> Upload Bukti Pembayaran
             </button>
             <div className="text-center"><h2 className="text-xl font-bold text-[#1a2c4d]">Upload Bukti Pembayaran</h2></div>
@@ -198,14 +194,6 @@ export default function SponsorDashboard({ currentUser, events, transactions, do
               <span className="text-gray-400 font-bold">Paket dipilih</span>
               <span className="font-extrabold text-[#1a2c4d] uppercase font-mono">{selectedPackage.nama_paket}</span>
             </div>
-            {selectedPackage.persentase_dana === 0 && (
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-gray-700">Jumlah Donasi (Rp) <span className="text-red-500">*</span></label>
-                <input type="number" min="0" required placeholder="Masukkan jumlah donasi"
-                  value={customAmount} onChange={(e) => setCustomAmount(e.target.value)}
-                  className="w-full px-4 py-3 text-xs bg-white border border-gray-100 rounded-xl focus:outline-none font-mono" />
-              </div>
-            )}
             <form onSubmit={handleUploadPayment} className="space-y-4">
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-gray-700">Upload Bukti Transfer</label>
@@ -230,7 +218,7 @@ export default function SponsorDashboard({ currentUser, events, transactions, do
                 );
               })()}
               <div className="grid grid-cols-2 gap-3 pt-2">
-                <button type="button" onClick={() => { setCustomAmount(''); setCurrentStep('pilih-paket'); }} className="py-3 bg-white hover:bg-gray-50 text-gray-500 font-bold text-xs rounded-xl border border-gray-100">Batal</button>
+                <button type="button" onClick={() => setCurrentStep('pilih-paket')} className="py-3 bg-white hover:bg-gray-50 text-gray-500 font-bold text-xs rounded-xl border border-gray-100">Batal</button>
                 <button type="submit" disabled={submitLoading} className="py-3 bg-[#1a2c4d] hover:bg-[#15233e] text-white font-bold text-xs rounded-xl shadow-md disabled:opacity-50">
                   {submitLoading ? 'Mengirim...' : 'Upload Bukti'}
                 </button>
