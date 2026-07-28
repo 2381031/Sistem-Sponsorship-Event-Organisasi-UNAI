@@ -144,7 +144,7 @@ export default function App() {
   }
 
   return (
-    <div id="app-root-container" className="min-h-screen bg-slate-50 flex flex-col font-sans">
+    <div id="app-root-container" className="min-h-screen min-h-[100dvh] bg-slate-50 flex flex-col font-sans">
       <div className="flex-1 flex overflow-hidden">
         <main className="flex-1 overflow-y-auto">
           {currentUser ? (

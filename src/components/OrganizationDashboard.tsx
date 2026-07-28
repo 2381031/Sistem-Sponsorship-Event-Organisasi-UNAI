@@ -4,7 +4,8 @@ import { api } from '../api';
 import {
   Building2, Calendar, Target, DollarSign, UploadCloud, Users, CheckCircle2,
   Clock, AlertCircle, FileText, ChevronRight, Edit3, Trash2, Eye, Image as ImageIcon,
-  FileDown, Video, ShieldAlert, CheckCircle, ArrowLeft, LogOut, Check, HelpCircle, Upload
+  FileDown, Video, ShieldAlert, CheckCircle, ArrowLeft, LogOut, Check, HelpCircle, Upload,
+  LayoutDashboard, CalendarDays, UserCircle
 } from 'lucide-react';
 
 interface Props {
@@ -171,32 +172,22 @@ export default function OrganizationDashboard({
 
   return (
     <div className="bg-[#f8fafc] min-h-screen">
-      <div className="bg-[#1a2c4d] text-white px-6 py-4 flex items-center justify-between shadow-md">
-        <div className="flex items-center gap-3">
-          <div className="h-10 w-10 bg-white/10 rounded-xl flex items-center justify-center font-bold text-yellow-400">
+      <div className="bg-[#1a2c4d] text-white px-4 md:px-6 py-3 md:py-4 flex items-center justify-between shadow-md shrink-0">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="h-10 w-10 bg-white/10 rounded-xl flex items-center justify-center font-bold text-yellow-400 shrink-0">
             {profileNama?.substring(0, 2).toUpperCase() || 'OM'}
           </div>
-          <div>
-            <h1 className="text-sm font-bold tracking-tight">{profileNama}</h1>
+          <div className="min-w-0">
+            <h1 className="text-sm font-bold tracking-tight truncate">{profileNama}</h1>
             <p className="text-[10px] text-gray-300 font-medium">Organisasi</p>
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="flex gap-1.5 bg-slate-800/50 p-1 rounded-xl">
-            {(['dashboard', 'manajemen', 'profil'] as const).map(tab => (
-              <button key={tab} onClick={() => setActiveTab(tab)}
-                className={`px-3 py-1.5 text-[10px] font-bold rounded-lg transition-all ${(activeTab === tab || (tab === 'manajemen' && activeTab === 'buat-event')) ? 'bg-[#1a2c4d] text-white' : 'text-gray-400 hover:text-white'}`}>
-                {tab === 'dashboard' ? 'Dashboard' : tab === 'manajemen' ? 'Manajemen Event' : 'Profil'}
-              </button>
-            ))}
-          </div>
-          <button onClick={onLogout} className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-gray-300 hover:text-white transition-all" title="Logout">
-            <LogOut className="h-4 w-4" />
-          </button>
-        </div>
+        <button onClick={onLogout} className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-gray-300 hover:text-white transition-all shrink-0" title="Logout">
+          <LogOut className="h-4 w-4" />
+        </button>
       </div>
 
-      <div className="max-w-6xl mx-auto px-4 py-8">
+      <div className="flex-1 max-w-6xl w-full mx-auto px-4 pt-4 md:pt-6 pb-28">
         {activeTab === 'dashboard' && (
           <div className="space-y-6">
             <div className="text-center mb-6">
@@ -390,6 +381,20 @@ export default function OrganizationDashboard({
             </form>
           </div>
         )}
+      </div>
+
+      <div className="fixed bottom-0 left-0 right-0 w-full max-w-6xl mx-auto bg-white border-t border-gray-100 px-4 py-2 flex justify-around shadow-[0_-4px_20px_rgba(0,0,0,0.03)] z-40">
+        {([
+          ['dashboard', 'Dashboard', LayoutDashboard],
+          ['manajemen', 'Event', CalendarDays],
+          ['profil', 'Profil', UserCircle],
+        ] as const).map(([tab, label, Icon]) => (
+          <button key={tab} onClick={() => { setActiveTab(tab as any); if (tab === 'manajemen') setEditingEvent(null); }}
+            className={`flex flex-col items-center justify-center py-1 min-w-0 ${(activeTab === tab || (tab === 'manajemen' && activeTab === 'buat-event')) ? 'text-[#1a2c4d]' : 'text-gray-400'}`}>
+            <Icon className={`h-5 w-5 ${(activeTab === tab || (tab === 'manajemen' && activeTab === 'buat-event')) ? 'stroke-[2.5]' : 'stroke-[1.8]'}`} />
+            <span className="text-[9px] font-extrabold mt-1">{label}</span>
+          </button>
+        ))}
       </div>
     </div>
   );

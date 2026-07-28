@@ -92,15 +92,15 @@ export default function SponsorDashboard({ currentUser, events, transactions, do
 
   return (
     <div className="bg-[#f8fafc] min-h-screen">
-      <div className="bg-[#1a2c4d] text-white px-6 py-4 flex items-center justify-between shadow-md">
-        <div className="flex items-center gap-3">
-          <div className="h-10 w-10 bg-white/10 rounded-xl flex items-center justify-center font-bold text-emerald-400">{profileNama.substring(0, 2).toUpperCase()}</div>
-          <div><h1 className="text-sm font-bold">{profileNama}</h1><p className="text-[10px] text-emerald-400 font-mono">Sponsor</p></div>
+      <div className="bg-[#1a2c4d] text-white px-4 md:px-6 py-3 md:py-4 flex items-center justify-between shadow-md shrink-0">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="h-10 w-10 bg-white/10 rounded-xl flex items-center justify-center font-bold text-emerald-400 shrink-0">{profileNama.substring(0, 2).toUpperCase()}</div>
+          <div className="min-w-0"><h1 className="text-sm font-bold truncate">{profileNama}</h1><p className="text-[10px] text-emerald-400 font-mono">Sponsor</p></div>
         </div>
-        <button onClick={onLogout} className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-gray-300 hover:text-white transition-all"><LogOut className="h-4 w-4" /></button>
+        <button onClick={onLogout} className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-gray-300 hover:text-white transition-all shrink-0"><LogOut className="h-4 w-4" /></button>
       </div>
 
-      <div className="max-w-6xl mx-auto px-4 pt-6 pb-24">
+      <div className="max-w-6xl mx-auto px-4 pt-4 md:pt-6 pb-24">
         {activeTab === 'browse' && currentStep === 'list' && (
           <div className="space-y-6">
             <div className="text-center mb-6"><h2 className="text-xl font-bold text-[#1a2c4d]">Cari Event & Ajukan Sponsorship</h2></div>
@@ -294,7 +294,7 @@ export default function SponsorDashboard({ currentUser, events, transactions, do
         )}
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 w-full bg-white border-t border-gray-100 px-6 py-2 flex justify-around shadow-[0_-2px_15px_rgba(0,0,0,0.03)] z-40 max-w-6xl mx-auto">
+      <div className="fixed bottom-0 left-0 right-0 w-full bg-white border-t border-gray-100 px-4 py-2 flex justify-around shadow-[0_-4px_20px_rgba(0,0,0,0.03)] z-40 max-w-6xl mx-auto">
         {([['browse', 'Cari Event', Search], ['riwayat', 'Riwayat', FileText], ['profil', 'Profil', UserIcon]] as const).map(([tab, label, Icon]) => (
           <button key={tab} onClick={() => { setActiveTab(tab); setCurrentStep('list'); }}
             className={`flex flex-col items-center gap-1 py-1 ${activeTab === tab ? 'text-[#1a2c4d]' : 'text-gray-400'}`}>

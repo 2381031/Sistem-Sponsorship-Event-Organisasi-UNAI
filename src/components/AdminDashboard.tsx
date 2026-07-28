@@ -35,15 +35,15 @@ export default function AdminDashboard({
 
   return (
     <div className="bg-[#f8fafc] min-h-screen w-full flex flex-col">
-      <div className="bg-[#1a2c4d] text-white px-6 py-4 flex items-center justify-between shadow-md shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="h-10 w-10 bg-white/10 rounded-xl flex items-center justify-center font-extrabold text-blue-400 text-lg">A</div>
-          <div><h1 className="text-sm font-bold">Admin Sistem Sponsorship UNAI</h1><p className="text-[10px] text-blue-400 font-mono">{currentUser.email}</p></div>
+      <div className="bg-[#1a2c4d] text-white px-4 md:px-6 py-3 md:py-4 flex items-center justify-between shadow-md shrink-0">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="h-10 w-10 bg-white/10 rounded-xl flex items-center justify-center font-extrabold text-blue-400 text-lg shrink-0">A</div>
+          <div className="min-w-0"><h1 className="text-sm font-bold truncate">Admin Sistem Sponsorship UNAI</h1><p className="text-[10px] text-blue-400 font-mono truncate">{currentUser.email}</p></div>
         </div>
-        <button onClick={onLogout} className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-gray-300 hover:text-white transition-all"><LogOut className="h-4 w-4" /></button>
+        <button onClick={onLogout} className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-gray-300 hover:text-white transition-all shrink-0"><LogOut className="h-4 w-4" /></button>
       </div>
 
-      <div className="flex-1 max-w-6xl w-full mx-auto px-4 pt-6 pb-28">
+      <div className="flex-1 max-w-6xl w-full mx-auto px-4 pt-4 md:pt-6 pb-28">
         {activeTab === 'verifikasi' && (
           <div className="space-y-6">
             <div className="flex flex-col items-center text-center mt-2 mb-6">
@@ -166,7 +166,7 @@ export default function AdminDashboard({
         )}
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 w-full max-w-6xl mx-auto bg-white border-t border-gray-100 px-6 py-2.5 flex justify-around shadow-[0_-4px_20px_rgba(0,0,0,0.03)] z-40">
+      <div className="fixed bottom-0 left-0 right-0 w-full max-w-6xl mx-auto bg-white border-t border-gray-100 px-4 py-2 flex justify-around shadow-[0_-4px_20px_rgba(0,0,0,0.03)] z-40">
         {([['verifikasi', 'Verifikasi', ShieldCheck], ['pengguna', 'Pengguna', Users], ['pembayaran', 'Pembayaran', Landmark]] as const).map(([tab, label, Icon]) => (
           <button key={tab} onClick={() => setActiveTab(tab)}
             className={`flex flex-col items-center justify-center py-1 ${activeTab === tab ? 'text-[#1a2c4d]' : 'text-gray-400'}`}>
