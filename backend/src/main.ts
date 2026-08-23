@@ -9,7 +9,7 @@ import * as fs from 'fs';
 import { AppModule } from './app.module';
 
 export const uploadsRoot = path.join(process.cwd(), 'uploads');
-fs.mkdirSync(path.join(uploadsRoot, 'bukti'), { recursive: true });
+try { fs.mkdirSync(path.join(uploadsRoot, 'bukti'), { recursive: true }); } catch {}
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {

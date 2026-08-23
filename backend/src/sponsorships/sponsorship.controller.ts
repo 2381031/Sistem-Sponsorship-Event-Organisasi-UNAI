@@ -12,9 +12,10 @@ import { TransaksiService } from './transaksi.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 const buktiDir = join(process.cwd(), 'uploads', 'bukti');
-if (!existsSync(buktiDir)) mkdirSync(buktiDir, { recursive: true });
+try { if (!existsSync(buktiDir)) mkdirSync(buktiDir, { recursive: true }); } catch {}
 
 const useBlob = Boolean(process.env.BLOB_READ_WRITE_TOKEN);
+const isServerless = Boolean(process.env.VERCEL);
 
 const imageOnlyFilter = (req: any, file: any, cb: any) => {
   if (!file.mimetype.startsWith('image/')) {
@@ -27,7 +28,14 @@ const imageOnlyFilter = (req: any, file: any, cb: any) => {
 const buktiStorage = useBlob
   ? memoryStorage()
   : diskStorage({
-      destination: (req: any, file: any, cb: any) => cb(null, buktiDir),
+      destination: (req: any, file: any, cb: any) => {
+        if (isServerless) {
+          cb(new Error('Filesystem read-only: set environment variable BLOB_READ_WRITE_TOKEN di Vercel'));
+          return;
+        }
+        try { if (!existsSync(buktiDir)) mkdirSync(buktiDir, { recursive: true }); } catch {}
+        cb(null, buktiDir);
+      },
       filename: (req: any, file: any, cb: any) => {
         const unique = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
         cb(null, `bukti-${unique}${extname(file.originalname).toLowerCase()}`);
@@ -45,6 +53,9 @@ async function saveBukti(file?: any): Promise<string | null> {
       addRandomSuffix: false,
     });
     return blob.url;
+  }
+  if (isServerless) {
+    throw new BadRequestException('Storage belum dikonfigurasi: hubungkan Vercel Blob store (BLOB_READ_WRITE_TOKEN)');
   }
   return `/api/uploads/bukti/${file.filename}`;
 }
