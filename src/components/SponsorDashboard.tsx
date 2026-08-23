@@ -24,7 +24,8 @@ export default function SponsorDashboard({ currentUser, events, transactions, do
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [selectedPackage, setSelectedPackage] = useState<any>(null);
-  const [buktiFile, setBuktiFile] = useState('');
+  const [buktiFile, setBuktiFile] = useState<File | null>(null);
+  const [buktiPreview, setBuktiPreview] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [submitLoading, setSubmitLoading] = useState(false);
@@ -64,6 +65,17 @@ export default function SponsorDashboard({ currentUser, events, transactions, do
     finally { setProfileLoading(false); }
   };
 
+  const handleBuktiChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0] ?? null;
+    setBuktiPreview((prev) => { if (prev) URL.revokeObjectURL(prev); return f ? URL.createObjectURL(f) : ''; });
+    setBuktiFile(f);
+  };
+
+  const resetBukti = () => {
+    setBuktiPreview((prev) => { if (prev) URL.revokeObjectURL(prev); return ''; });
+    setBuktiFile(null);
+  };
+
   const handleUploadPayment = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
@@ -73,19 +85,22 @@ export default function SponsorDashboard({ currentUser, events, transactions, do
     setSubmitLoading(true);
 
     try {
-      await onAddTransaction({
-        id_event: selectedEvent.id_event,
-        id_paket: selectedPackage.id_paket,
-        jumlah: selectedPackage.persentase_dana > 0
+      const fd = new FormData();
+      fd.append('id_event', String(selectedEvent.id_event));
+      fd.append('id_paket', String(selectedPackage.id_paket));
+      fd.append('jumlah', String(
+        selectedPackage.persentase_dana > 0
           ? selectedEvent.target_dana * (selectedPackage.persentase_dana / 100)
-          : Number(customAmount) || 0,
-        bukti_pembayaran: buktiFile.replace('C:\\fakepath\\', ''),
-        nama_event: selectedEvent.nama_event,
-        nama_sponsor: profileNama,
-        nama_paket: selectedPackage.nama_paket,
-      });
+          : Number(customAmount) || 0
+      ));
+      fd.append('nama_event', selectedEvent.nama_event);
+      fd.append('nama_sponsor', profileNama);
+      fd.append('nama_paket', selectedPackage.nama_paket);
+      fd.append('bukti_pembayaran', buktiFile);
+
+      await onAddTransaction(fd);
       setSuccessMsg('Bukti transfer berhasil dikirim! Menunggu verifikasi admin.');
-      setTimeout(() => { setSuccessMsg(''); setCurrentStep('list'); setActiveTab('riwayat'); setBuktiFile(''); setCustomAmount(''); setSelectedPackage(null); setSelectedEvent(null); }, 2500);
+      setTimeout(() => { setSuccessMsg(''); setCurrentStep('list'); setActiveTab('riwayat'); resetBukti(); setCustomAmount(''); setSelectedPackage(null); setSelectedEvent(null); }, 2500);
     } catch (err: any) { setErrorMsg(err.message); }
     finally { setSubmitLoading(false); }
   };
@@ -210,10 +225,15 @@ export default function SponsorDashboard({ currentUser, events, transactions, do
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-gray-700">Upload Bukti Transfer</label>
                 <div className="border border-dashed border-gray-200 rounded-2xl p-6 text-center bg-[#f8fafc] relative cursor-pointer">
-                  <input type="file" required accept="image/*" onChange={(e) => setBuktiFile(e.target.value)} className="absolute inset-0 opacity-0 cursor-pointer" />
+                  <input type="file" required accept="image/*" onChange={handleBuktiChange} className="absolute inset-0 opacity-0 cursor-pointer" />
                   <FileText className="h-6 w-6 text-gray-400 mx-auto mb-2" />
-                  <p className="text-xs font-bold text-gray-500">{buktiFile ? buktiFile.replace('C:\\fakepath\\', '') : 'Pilih File bukti transfer'}</p>
+                  <p className="text-xs font-bold text-gray-500">{buktiFile ? buktiFile.name : 'Pilih File bukti transfer'}</p>
                 </div>
+                {buktiPreview && (
+                  <div className="rounded-xl overflow-hidden border border-gray-100 bg-white">
+                    <img src={buktiPreview} alt="Preview bukti transfer" className="max-h-56 w-full object-contain bg-white" />
+                  </div>
+                )}
               </div>
               {(() => {
                 const orgBank = getOrgBankDetails(selectedEvent.id_organisasi);
@@ -230,7 +250,7 @@ export default function SponsorDashboard({ currentUser, events, transactions, do
                 );
               })()}
               <div className="grid grid-cols-2 gap-3 pt-2">
-                <button type="button" onClick={() => { setCustomAmount(''); setCurrentStep('pilih-paket'); }} className="py-3 bg-white hover:bg-gray-50 text-gray-500 font-bold text-xs rounded-xl border border-gray-100">Batal</button>
+                <button type="button" onClick={() => { resetBukti(); setCustomAmount(''); setCurrentStep('pilih-paket'); }} className="py-3 bg-white hover:bg-gray-50 text-gray-500 font-bold text-xs rounded-xl border border-gray-100">Batal</button>
                 <button type="submit" disabled={submitLoading} className="py-3 bg-[#1a2c4d] hover:bg-[#15233e] text-white font-bold text-xs rounded-xl shadow-md disabled:opacity-50">
                   {submitLoading ? 'Mengirim...' : 'Upload Bukti'}
                 </button>

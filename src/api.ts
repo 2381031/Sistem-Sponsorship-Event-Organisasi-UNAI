@@ -14,8 +14,9 @@ function clearToken() {
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getToken();
+  const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
+    ...(!isFormData ? { 'Content-Type': 'application/json' } : {}),
     ...((options.headers as Record<string, string>) || {}),
   };
   if (token) {
@@ -118,7 +119,8 @@ export const api = {
   },
 
   async createTransaction(data: any) {
-    return request<any>('/sponsorships', { method: 'POST', body: JSON.stringify(data) });
+    const body = data instanceof FormData ? data : JSON.stringify(data);
+    return request<any>('/sponsorships', { method: 'POST', body });
   },
 
   async updateTransaction(id: number, data: any) {

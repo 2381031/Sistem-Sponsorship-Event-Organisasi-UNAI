@@ -4,7 +4,12 @@ import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { ClassSerializerInterceptor, ExceptionFilter, Catch, ArgumentsHost, HttpException } from '@nestjs/common';
 import express, { Request, Response } from 'express';
+import * as path from 'path';
+import * as fs from 'fs';
 import { AppModule } from './app.module';
+
+export const uploadsRoot = path.join(process.cwd(), 'uploads');
+fs.mkdirSync(path.join(uploadsRoot, 'bukti'), { recursive: true });
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
@@ -33,6 +38,8 @@ async function bootstrapServer(): Promise<express.Express> {
   const app = await NestFactory.create(AppModule, adapter, { logger: ['error', 'warn', 'log'] });
   app.setGlobalPrefix('api');
   app.useGlobalFilters(new AllExceptionsFilter());
+
+  expressApp.use('/api/uploads', express.static(uploadsRoot));
 
   app.enableCors({
     origin: '*',

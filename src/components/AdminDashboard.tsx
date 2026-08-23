@@ -145,10 +145,27 @@ export default function AdminDashboard({
                     </div>
                     <div className="space-y-2 pt-2 border-t border-dashed border-gray-100">
                       <h4 className="text-[10px] font-extrabold text-gray-400 uppercase">Bukti Pembayaran</h4>
-                      <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 flex flex-col items-center text-center gap-2">
-                        <FileText className="h-5 w-5 text-gray-400" />
-                        <p className="text-[10px] font-bold text-gray-600 font-mono">{tx.bukti_pembayaran || 'bukti_transfer.png'}</p>
-                      </div>
+                      {tx.bukti_pembayaran && tx.bukti_pembayaran.startsWith('/api/uploads/') ? (
+                        <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 flex flex-col items-center gap-2">
+                          <img
+                            src={tx.bukti_pembayaran}
+                            alt={`Bukti pembayaran #${tx.id_transaksi}`}
+                            onClick={() => window.open(tx.bukti_pembayaran!, '_blank')}
+                            className="max-h-64 w-auto rounded-lg cursor-zoom-in border border-gray-200"
+                          />
+                          <p className="text-[9px] font-bold text-gray-400 font-mono">Klik gambar untuk memperbesar</p>
+                        </div>
+                      ) : tx.bukti_pembayaran ? (
+                        <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 flex flex-col items-center text-center gap-1">
+                          <FileText className="h-5 w-5 text-gray-400" />
+                          <p className="text-[10px] font-bold text-gray-600 font-mono">{tx.bukti_pembayaran}</p>
+                          <span className="text-[9px] text-gray-400 italic">Transaksi lama — file gambar tidak tersedia</span>
+                        </div>
+                      ) : (
+                        <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 text-center">
+                          <span className="text-[10px] text-gray-400 italic">Tidak ada bukti pembayaran</span>
+                        </div>
+                      )}
                     </div>
                     <div className="grid grid-cols-2 gap-3 pt-2">
                       <button onClick={() => onApprovePayment(tx.id_transaksi)} className="py-2.5 px-4 bg-[#22c55e] hover:bg-emerald-600 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all">

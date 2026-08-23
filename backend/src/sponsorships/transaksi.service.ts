@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import pool from '../database';
 
 @Injectable()
@@ -49,6 +49,51 @@ export class TransaksiService {
   async updateStatus(id: number, status: string) {
     await this.findOne(id);
     await pool.query('UPDATE transaksi_sponsorship SET status_pembayaran = $1 WHERE id_transaksi = $2', [status, id]);
+    return this.findOne(id);
+  }
+
+  async update(
+    id: number,
+    idPengguna: number,
+    data: { jumlah?: number; bukti_pembayaran?: string; id_paket?: number },
+  ) {
+    const transaksi = await this.findOne(id);
+
+    if (transaksi.id_sponsor !== idPengguna) {
+      throw new ForbiddenException('Anda tidak memiliki akses untuk mengubah transaksi ini');
+    }
+
+    if (transaksi.status_pembayaran !== 'Menunggu') {
+      throw new BadRequestException('Transaksi yang sudah diverifikasi tidak dapat diubah');
+    }
+
+    const fields: string[] = [];
+    const values: any[] = [];
+    let idx = 1;
+
+    if (data.jumlah !== undefined) {
+      fields.push(`jumlah = $${idx++}`);
+      values.push(data.jumlah);
+    }
+    if (data.bukti_pembayaran !== undefined) {
+      fields.push(`bukti_pembayaran = $${idx++}`);
+      values.push(data.bukti_pembayaran);
+    }
+    if (data.id_paket !== undefined) {
+      fields.push(`id_paket = $${idx++}`);
+      values.push(data.id_paket);
+    }
+
+    if (fields.length === 0) {
+      throw new BadRequestException('Tidak ada field yang dikirim untuk diperbarui');
+    }
+
+    values.push(id);
+    await pool.query(
+      `UPDATE transaksi_sponsorship SET ${fields.join(', ')} WHERE id_transaksi = $${idx}`,
+      values,
+    );
+
     return this.findOne(id);
   }
 }
