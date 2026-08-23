@@ -1,6 +1,6 @@
 import {
   Body, Controller, Get, Param, Patch, Post, Delete,
-  UseGuards, Request, ParseIntPipe,
+  UseGuards, Request, ParseIntPipe, ForbiddenException,
 } from '@nestjs/common';
 import { EventService } from './event.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -36,13 +36,21 @@ export class EventController {
 
   @UseGuards(JwtAuthGuard)
   @Patch(':id')
-  async update(@Param('id', ParseIntPipe) id: number, @Body() body: any) {
+  async update(@Param('id', ParseIntPipe) id: number, @Body() body: any, @Request() req: any) {
+    const event = await this.eventService.findOne(id);
+    if (event.id_organisasi !== req.user.id_pengguna && req.user.peran !== 'Admin') {
+      throw new ForbiddenException('Anda bukan pemilik event ini');
+    }
     return this.eventService.update(id, body);
   }
 
   @UseGuards(JwtAuthGuard)
   @Patch(':id/status')
-  async updateStatus(@Param('id', ParseIntPipe) id: number, @Body('status') status: string) {
+  async updateStatus(@Param('id', ParseIntPipe) id: number, @Body('status') status: string, @Request() req: any) {
+    const event = await this.eventService.findOne(id);
+    if (event.id_organisasi !== req.user.id_pengguna && req.user.peran !== 'Admin') {
+      throw new ForbiddenException('Anda bukan pemilik event ini');
+    }
     return this.eventService.updateStatus(id, status);
   }
 
