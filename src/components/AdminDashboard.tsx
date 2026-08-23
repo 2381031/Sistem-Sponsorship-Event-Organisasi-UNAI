@@ -145,7 +145,7 @@ export default function AdminDashboard({
                     </div>
                     <div className="space-y-2 pt-2 border-t border-dashed border-gray-100">
                       <h4 className="text-[10px] font-extrabold text-gray-400 uppercase">Bukti Pembayaran</h4>
-                      {tx.bukti_pembayaran && tx.bukti_pembayaran.startsWith('/api/uploads/') ? (
+                      {tx.bukti_pembayaran && (tx.bukti_pembayaran.startsWith('/api/uploads/') || tx.bukti_pembayaran.startsWith('http')) ? (
                         <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 flex flex-col items-center gap-2">
                           <img
                             src={tx.bukti_pembayaran}

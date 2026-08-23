@@ -3,8 +3,9 @@ import {
   UseGuards, UseInterceptors, UploadedFile, Request, ParseIntPipe, ForbiddenException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
+import { diskStorage, memoryStorage } from 'multer';
 import { extname, join } from 'path';
+import { put } from '@vercel/blob';
 import { BadRequestException } from '@nestjs/common';
 import { existsSync, mkdirSync } from 'fs';
 import { TransaksiService } from './transaksi.service';
@@ -12,6 +13,8 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 const buktiDir = join(process.cwd(), 'uploads', 'bukti');
 if (!existsSync(buktiDir)) mkdirSync(buktiDir, { recursive: true });
+
+const useBlob = Boolean(process.env.BLOB_READ_WRITE_TOKEN);
 
 const imageOnlyFilter = (req: any, file: any, cb: any) => {
   if (!file.mimetype.startsWith('image/')) {
@@ -21,13 +24,30 @@ const imageOnlyFilter = (req: any, file: any, cb: any) => {
   cb(null, true);
 };
 
-const buktiStorage = diskStorage({
-  destination: (req: any, file: any, cb: any) => cb(null, buktiDir),
-  filename: (req: any, file: any, cb: any) => {
+const buktiStorage = useBlob
+  ? memoryStorage()
+  : diskStorage({
+      destination: (req: any, file: any, cb: any) => cb(null, buktiDir),
+      filename: (req: any, file: any, cb: any) => {
+        const unique = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+        cb(null, `bukti-${unique}${extname(file.originalname).toLowerCase()}`);
+      },
+    });
+
+async function saveBukti(file?: any): Promise<string | null> {
+  if (!file) return null;
+  if (useBlob) {
     const unique = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-    cb(null, `bukti-${unique}${extname(file.originalname).toLowerCase()}`);
-  },
-});
+    const ext = extname(file.originalname).toLowerCase() || '.jpg';
+    const blob = await put(`bukti/bukti-${unique}${ext}`, file.buffer, {
+      access: 'public',
+      contentType: file.mimetype,
+      addRandomSuffix: false,
+    });
+    return blob.url;
+  }
+  return `/api/uploads/bukti/${file.filename}`;
+}
 
 const uploadBukti = FileInterceptor('bukti_pembayaran', {
   storage: buktiStorage,
@@ -48,7 +68,7 @@ export class TransaksiController {
       id_event: body.id_event,
       id_paket: body.id_paket,
       jumlah: body.jumlah,
-      bukti_pembayaran: file ? `/api/uploads/bukti/${file.filename}` : body.bukti_pembayaran || null,
+      bukti_pembayaran: (await saveBukti(file)) || body.bukti_pembayaran || null,
       nama_event: body.nama_event,
       nama_sponsor: body.nama_sponsor,
       nama_paket: body.nama_paket,
@@ -91,7 +111,7 @@ export class TransaksiController {
   ) {
     return this.transaksiService.update(id, req.user.id_pengguna, {
       jumlah: body.jumlah,
-      bukti_pembayaran: file ? `/api/uploads/bukti/${file.filename}` : body.bukti_pembayaran,
+      bukti_pembayaran: (await saveBukti(file)) ?? body.bukti_pembayaran,
       id_paket: body.id_paket,
     });
   }
