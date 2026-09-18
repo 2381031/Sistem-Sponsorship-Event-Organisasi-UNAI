@@ -2,7 +2,22 @@ import pg from 'pg';
 import * as path from 'path';
 import * as fs from 'fs';
 
+const resolveDatabaseUrl = () => {
+  if (process.env.DATABASE_URL) return process.env.DATABASE_URL;
+  const candidates = [
+    process.env.DATABASE_SISTEM_SPONSORSHIP_POSTGRES_URL,
+    process.env.POSTGRES_URL,
+    process.env.POSTGRES_PRISMA_URL,
+    process.env.DATABASE_SISTEM_SPONSORSHIP_POSTGRES_DATABASE,
+    process.env.DATABASE_SISTEM_SPONSORSHIP_DATABASE_URL,
+  ];
+  return candidates.find(Boolean);
+};
+
 if (!process.env.DATABASE_URL) {
+  const defaultDatabaseUrl = resolveDatabaseUrl();
+  if (defaultDatabaseUrl) process.env.DATABASE_URL = defaultDatabaseUrl;
+
   try {
     const dotenvPaths = [
       path.resolve(process.cwd(), 'backend', '.env'),
@@ -26,16 +41,22 @@ if (!process.env.DATABASE_URL) {
       }
     }
   } catch {}
+
+  if (!process.env.DATABASE_URL) {
+    const fallbackDatabaseUrl = resolveDatabaseUrl();
+    if (fallbackDatabaseUrl) process.env.DATABASE_URL = fallbackDatabaseUrl;
+  }
 }
 
 let _pool: pg.Pool | null = null;
 
 function getPool(): pg.Pool {
   if (!_pool) {
-    const connectionString = process.env.DATABASE_URL;
+    const connectionString = resolveDatabaseUrl();
     if (!connectionString) {
-      throw new Error('DATABASE_URL tidak ditemukan.');
+      throw new Error('DATABASE_URL tidak ditemukan. Tambahkan DATABASE_URL atau DATABASE_SISTEM_SPONSORSHIP_POSTGRES_URL di Vercel env.');
     }
+    process.env.DATABASE_URL = connectionString;
     _pool = new pg.Pool({
       connectionString,
       ssl: { rejectUnauthorized: false },
