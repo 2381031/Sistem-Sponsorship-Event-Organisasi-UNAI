@@ -40,6 +40,7 @@ async function bootstrapServer(): Promise<express.Express> {
   app.useGlobalFilters(new AllExceptionsFilter());
 
   expressApp.use('/api/uploads', express.static(uploadsRoot));
+  expressApp.use('/api/uploads/proposals', express.static(path.join(uploadsRoot, 'proposals')));
 
   app.enableCors({
     origin: '*',

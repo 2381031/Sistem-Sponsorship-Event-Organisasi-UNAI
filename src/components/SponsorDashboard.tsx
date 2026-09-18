@@ -39,9 +39,12 @@ export default function SponsorDashboard({ currentUser, events, transactions, do
   const [profileSuccess, setProfileSuccess] = useState('');
   const [profileLoading, setProfileLoading] = useState(false);
 
-  const openEvents = events.filter(e =>
-    e.status_event === 'Dipublikasikan' && e.nama_event.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const openEvents = events.filter(e => {
+    const status = String(e.status_event || '').trim().toLowerCase();
+    const isClosed = ['ditutup', 'ditutupkan', 'closed', 'close'].includes(status);
+    const isPublished = ['dipublikasikan', 'published', 'open', 'terbuka'].includes(status);
+    return !isClosed && isPublished && e.nama_event.toLowerCase().includes(searchTerm.toLowerCase());
+  });
 
   const myTransactions = transactions.filter(t => t.id_sponsor === currentUser.id);
 
@@ -142,10 +145,15 @@ export default function SponsorDashboard({ currentUser, events, transactions, do
                 const progressPct = event.target_dana > 0 ? Math.min(100, Math.round((eventCollected / event.target_dana) * 100)) : 0;
                 return (
                   <div key={event.id_event} className="bg-white rounded-3xl border border-gray-100 p-5 shadow-sm space-y-4">
-                    <div className="flex justify-between items-start">
+                    <div className="flex justify-between items-start gap-3">
                       <div><h3 className="text-base font-bold text-[#1a2c4d]">{event.nama_event}</h3><p className="text-[10px] text-gray-400">{event.tanggal_event}</p></div>
                       <span className="bg-[#e2f6ec] text-[#2ebd7d] px-2 py-0.5 rounded text-[10px] font-bold uppercase">{event.status_event}</span>
                     </div>
+                    {event.url_proposal && !event.url_proposal.includes('fakepath') && (
+                      <a href={event.url_proposal} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-700 hover:underline">
+                        <FileText className="h-3.5 w-3.5" /> Lihat Proposal
+                      </a>
+                    )}
                     <div className="space-y-1.5">
                       <div className="flex justify-between text-[10px] font-bold text-gray-700"><span>Terkumpul</span><span>{progressPct}%</span></div>
                       <div className="w-full h-2.5 bg-gray-100 rounded-full overflow-hidden"><div className="h-full bg-[#1a2c4d] rounded-full" style={{ width: `${progressPct}%` }} /></div>

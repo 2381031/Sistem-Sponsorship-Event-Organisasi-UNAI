@@ -4,8 +4,14 @@ import * as fs from 'fs';
 
 if (!process.env.DATABASE_URL) {
   try {
-    const dotenvPath = path.resolve(process.cwd(), 'backend', '.env');
-    if (fs.existsSync(dotenvPath)) {
+    const dotenvPaths = [
+      path.resolve(process.cwd(), 'backend', '.env'),
+      path.resolve(process.cwd(), '.env'),
+      path.resolve(__dirname, '..', '.env'),
+      path.resolve(__dirname, '..', '..', '.env'),
+    ];
+    const dotenvPath = dotenvPaths.find((candidate) => fs.existsSync(candidate));
+    if (dotenvPath) {
       const envContent = fs.readFileSync(dotenvPath, 'utf-8');
       for (const line of envContent.split('\n')) {
         const trimmed = line.trim();

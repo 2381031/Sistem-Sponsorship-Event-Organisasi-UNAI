@@ -39,7 +39,7 @@ export default function OrganizationDashboard({
   const [tanggalEvent, setTanggalEvent] = useState('');
   const [deskripsiEvent, setDeskripsiEvent] = useState('');
   const [targetDana, setTargetDana] = useState(50000000);
-  const [proposalFile, setProposalFile] = useState('');
+  const [proposalFile, setProposalFile] = useState<File | null>(null);
   const [createError, setCreateError] = useState('');
   const [createSuccess, setCreateSuccess] = useState('');
   const [createLoading, setCreateLoading] = useState(false);
@@ -128,15 +128,15 @@ export default function OrganizationDashboard({
         });
         setCreateSuccess('Event berhasil diperbarui!');
       } else {
-        await onCreateEvent({
-          nama_event: namaEvent,
-          tanggal_event: tanggalEvent,
-          deskripsi: deskripsiEvent,
-          target_dana: targetDana,
-          url_proposal: proposalFile || null,
-          status_event: 'Dipublikasikan',
-          paket_tersedia: customPackages,
-        });
+        const formData = new FormData();
+        formData.append('nama_event', namaEvent);
+        formData.append('tanggal_event', tanggalEvent);
+        formData.append('deskripsi', deskripsiEvent);
+        formData.append('target_dana', String(targetDana));
+        formData.append('status_event', 'Dipublikasikan');
+        formData.append('paket_tersedia', JSON.stringify(customPackages));
+        if (proposalFile) formData.append('proposal', proposalFile);
+        await onCreateEvent(formData);
         setCreateSuccess('Event berhasil diterbitkan!');
       }
 
@@ -144,7 +144,7 @@ export default function OrganizationDashboard({
         setCreateSuccess('');
         setActiveTab('manajemen');
         setEditingEvent(null);
-        setNamaEvent(''); setTanggalEvent(''); setDeskripsiEvent(''); setProposalFile('');
+        setNamaEvent(''); setTanggalEvent(''); setDeskripsiEvent(''); setProposalFile(null);
       }, 2000);
     } catch (err: any) {
       setCreateError(err.message || 'Gagal menyimpan event');
@@ -328,9 +328,9 @@ export default function OrganizationDashboard({
               {!editingEvent && (
                 <div className="space-y-1.5"><label className="text-xs font-bold text-gray-700">Upload Proposal (.pdf)</label>
                   <div className="border border-dashed border-gray-200 hover:border-blue-900/30 bg-[#f8fafc] rounded-2xl p-6 text-center relative cursor-pointer">
-                    <input type="file" accept=".pdf" onChange={(e) => setProposalFile(e.target.value)} className="absolute inset-0 opacity-0 cursor-pointer" />
+                    <input type="file" accept="application/pdf,.pdf" onChange={(e) => setProposalFile(e.target.files?.[0] || null)} className="absolute inset-0 opacity-0 cursor-pointer" />
                     <FileText className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                    <p className="text-xs font-bold text-gray-500">{proposalFile ? proposalFile.replace('C:\\fakepath\\', '') : 'Ketuk untuk memilih file PDF'}</p>
+                    <p className="text-xs font-bold text-gray-500">{proposalFile ? proposalFile.name : 'Ketuk untuk memilih file PDF'}</p>
                   </div>
                 </div>
               )}

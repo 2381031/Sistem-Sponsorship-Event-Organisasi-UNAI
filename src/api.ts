@@ -94,7 +94,8 @@ export const api = {
   },
 
   async createEvent(data: any) {
-    return request<any>('/events', { method: 'POST', body: JSON.stringify(data) });
+    const body = data instanceof FormData ? data : JSON.stringify(data);
+    return request<any>('/events', { method: 'POST', body });
   },
 
   async updateEvent(id: number, data: any) {
