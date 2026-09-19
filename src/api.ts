@@ -30,7 +30,13 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
   const json = await res.json().catch(() => null);
   if (!res.ok) {
+    if (res.status === 401) {
+      throw new Error('Sesi login sudah tidak valid. Silakan keluar dan masuk kembali.');
+    }
     throw new Error(json?.message || `HTTP ${res.status}`);
+  }
+  if (json === null) {
+    throw new Error('Respons server tidak valid. Periksa apakah layanan API berjalan.');
   }
   return json as T;
 }
@@ -99,7 +105,8 @@ export const api = {
   },
 
   async updateEvent(id: number, data: any) {
-    return request<any>(`/events/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
+    const body = data instanceof FormData ? data : JSON.stringify(data);
+    return request<any>(`/events/${id}`, { method: 'PATCH', body });
   },
 
   async updateEventStatus(id: number, status: string) {

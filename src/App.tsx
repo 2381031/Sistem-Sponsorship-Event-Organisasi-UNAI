@@ -17,23 +17,32 @@ export default function App() {
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [docs, setDocs] = useState<EventDoc[]>([]);
   const [loading, setLoading] = useState(true);
+  const [dataError, setDataError] = useState<string | null>(null);
 
   const loadAllData = useCallback(async () => {
+    if (!currentUser) return;
+    setDataError(null);
     try {
       const [evts, txs, users, allDocs] = await Promise.all([
         api.getEvents(),
         api.getTransactions(),
-        api.getUsers(),
+        currentUser.peran === 'Admin' ? api.getUsers() : Promise.resolve([]),
         api.getAllDocs(),
       ]);
       setEvents(evts);
       setTransactions(txs);
       setAllUsers(users);
       setDocs(allDocs);
+      if (currentUser.peran === 'Sponsor') {
+        const organizationIds = [...new Set(evts.map(event => event.id_organisasi))];
+        const organizations = await Promise.all(organizationIds.map(id => api.getUser(id)));
+        setAllUsers(organizations);
+      }
     } catch (err) {
       console.error('Gagal memuat data:', err);
+      setDataError(err instanceof Error ? err.message : 'Server tidak dapat dihubungi.');
     }
-  }, []);
+  }, [currentUser]);
 
   useEffect(() => {
     const token = localStorage.getItem('unai_token');
@@ -55,7 +64,6 @@ export default function App() {
   const handleLoginSuccess = (user: User) => {
     setCurrentUser(user);
     setLoading(true);
-    loadAllData().finally(() => setLoading(false));
   };
 
   const handleLogout = () => {
@@ -66,6 +74,7 @@ export default function App() {
     setTransactions([]);
     setAllUsers([]);
     setDocs([]);
+    setDataError(null);
   };
 
   const handleRegisterUser = async (data: any) => {
@@ -145,6 +154,17 @@ export default function App() {
 
   return (
     <div id="app-root-container" className="min-h-screen min-h-[100dvh] bg-slate-50 flex flex-col font-sans">
+      {currentUser && dataError && (
+        <div role="alert" className="border-b border-red-200 bg-red-50 p-4 text-sm text-red-800">
+          <p>Data belum berhasil dimuat. Tampilan kosong belum berarti data Anda terhapus.</p>
+          <p className="mt-1">{dataError}</p>
+          <button type="button" className="mt-2 font-bold underline" onClick={() => {
+            setLoading(true);
+            void loadAllData().finally(() => setLoading(false));
+          }}>Coba lagi</button>
+          <button type="button" className="ml-4 font-bold underline" onClick={handleLogout}>Keluar / masuk ulang</button>
+        </div>
+      )}
       <div className="flex-1 flex overflow-hidden">
         <main className="flex-1 overflow-y-auto">
           {currentUser ? (

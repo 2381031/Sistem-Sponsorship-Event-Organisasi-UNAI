@@ -13,6 +13,7 @@ export class EventService {
     status_event?: string;
     paket_tersedia?: Array<{ nama_paket: string; persentase_dana: number; deskripsi_keuntungan?: string }>;
   }) {
+    if (!data.url_proposal?.trim()) throw new BadRequestException('Upload proposal PDF sebelum menerbitkan event');
     const orgResult = await pool.query('SELECT id_pengguna FROM organisasi WHERE id_pengguna = $1', [data.id_pengguna]);
     if (orgResult.rows.length === 0) throw new BadRequestException('Profil organisasi tidak ditemukan');
 
@@ -72,7 +73,10 @@ export class EventService {
   }
 
   async update(id: number, data: any) {
-    await this.findOne(id);
+    const event = await this.findOne(id);
+    if ((data.status_event ?? event.status_event) === 'Dipublikasikan' && !(data.url_proposal ?? event.url_proposal)?.trim()) {
+      throw new BadRequestException('Upload proposal PDF sebelum menerbitkan event');
+    }
     const fields: string[] = [];
     const values: any[] = [];
     let idx = 1;
@@ -90,7 +94,10 @@ export class EventService {
   }
 
   async updateStatus(id: number, status: string) {
-    await this.findOne(id);
+    const event = await this.findOne(id);
+    if (status === 'Dipublikasikan' && !event.url_proposal?.trim()) {
+      throw new BadRequestException('Lengkapi proposal PDF melalui Edit Event sebelum membuka event');
+    }
     await pool.query('UPDATE event SET status_event = $1 WHERE id_event = $2', [status, id]);
     return this.findOne(id);
   }

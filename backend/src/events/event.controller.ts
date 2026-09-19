@@ -28,6 +28,9 @@ const uploadProposal = FileInterceptor('proposal', {
 
 async function saveProposal(file?: any): Promise<string | null> {
   if (!file) return null;
+  if (file.buffer?.subarray(0, 5).toString() !== '%PDF-') {
+    throw new BadRequestException('Isi file proposal harus berupa PDF yang valid');
+  }
   if (process.env.BLOB_READ_WRITE_TOKEN) {
     const unique = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
     const ext = extname(file.originalname).toLowerCase() || '.pdf';
@@ -55,6 +58,8 @@ export class EventController {
   @UseInterceptors(uploadProposal)
   @Post()
   async create(@Body() body: any, @UploadedFile() file: any, @Request() req: any) {
+    if (req.user.peran !== 'Organisasi') throw new ForbiddenException('Hanya organisasi yang dapat membuat event');
+    if (!file) throw new BadRequestException('Upload proposal PDF sebelum menerbitkan event');
     let paketTersedia = body.paket_tersedia;
     if (typeof paketTersedia === 'string') {
       try { paketTersedia = JSON.parse(paketTersedia); } catch { paketTersedia = []; }
@@ -65,7 +70,7 @@ export class EventController {
       tanggal_event: body.tanggal_event,
       deskripsi: body.deskripsi,
       target_dana: body.target_dana,
-      url_proposal: (await saveProposal(file)) || body.url_proposal,
+      url_proposal: (await saveProposal(file))!,
       status_event: body.status_event,
       paket_tersedia: paketTersedia,
     });
@@ -82,13 +87,17 @@ export class EventController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @UseInterceptors(uploadProposal)
   @Patch(':id')
-  async update(@Param('id', ParseIntPipe) id: number, @Body() body: any, @Request() req: any) {
+  async update(@Param('id', ParseIntPipe) id: number, @Body() body: any, @Request() req: any, @UploadedFile() file: any) {
     const event = await this.eventService.findOne(id);
     if (event.id_organisasi !== req.user.id_pengguna && req.user.peran !== 'Admin') {
       throw new ForbiddenException('Anda bukan pemilik event ini');
     }
-    return this.eventService.update(id, body);
+    return this.eventService.update(id, {
+      ...body,
+      url_proposal: (await saveProposal(file)) || event.url_proposal,
+    });
   }
 
   @UseGuards(JwtAuthGuard)

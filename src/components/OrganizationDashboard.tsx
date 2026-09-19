@@ -88,6 +88,14 @@ export default function OrganizationDashboard({
     e.preventDefault();
     setCreateError('');
     setCreateSuccess('');
+    if (!proposalFile && !editingEvent?.url_proposal) {
+      setCreateError('Upload proposal PDF sebelum menerbitkan event.');
+      return;
+    }
+    if (proposalFile && (!proposalFile.name.toLowerCase().endsWith('.pdf') || (proposalFile.type && proposalFile.type !== 'application/pdf') || proposalFile.size > 10 * 1024 * 1024)) {
+      setCreateError('Proposal harus berupa file PDF maksimal 10 MB.');
+      return;
+    }
     setCreateLoading(true);
 
     try {
@@ -120,12 +128,13 @@ export default function OrganizationDashboard({
       ];
 
       if (editingEvent) {
-        await onUpdateEvent(editingEvent.id_event, {
-          nama_event: namaEvent,
-          tanggal_event: tanggalEvent,
-          deskripsi: deskripsiEvent,
-          target_dana: targetDana,
-        });
+        const formData = new FormData();
+        formData.append('nama_event', namaEvent);
+        formData.append('tanggal_event', tanggalEvent);
+        formData.append('deskripsi', deskripsiEvent);
+        formData.append('target_dana', String(targetDana));
+        if (proposalFile) formData.append('proposal', proposalFile);
+        await onUpdateEvent(editingEvent.id_event, formData);
         setCreateSuccess('Event berhasil diperbarui!');
       } else {
         const formData = new FormData();
@@ -155,7 +164,11 @@ export default function OrganizationDashboard({
 
   const handleToggleEventStatus = async (event: Event) => {
     const newStatus = event.status_event === 'Dipublikasikan' ? 'Ditutup' : 'Dipublikasikan';
-    await onUpdateEventStatus(event.id_event, newStatus);
+    try {
+      await onUpdateEventStatus(event.id_event, newStatus);
+    } catch (err: any) {
+      window.alert(err.message || 'Gagal mengubah status event');
+    }
   };
 
   const handleUploadDocSubmit = async (e: React.FormEvent) => {
@@ -256,7 +269,7 @@ export default function OrganizationDashboard({
             <div className="text-center mb-6">
               <h2 className="text-xl font-bold text-[#1a2c4d] tracking-tight">Manajemen Event</h2>
             </div>
-            <button onClick={() => { setActiveTab('buat-event'); setEditingEvent(null); setNamaEvent(''); setTanggalEvent(''); setDeskripsiEvent(''); setTargetDana(50000000); }}
+            <button onClick={() => { setActiveTab('buat-event'); setProposalFile(null); setCreateError(''); setEditingEvent(null); setNamaEvent(''); setTanggalEvent(''); setDeskripsiEvent(''); setTargetDana(50000000); }}
               className="w-full py-3 bg-[#1a2c4d] hover:bg-[#15233e] text-white font-bold text-xs rounded-xl transition-all shadow-md">
               + Buat Event Baru
             </button>
@@ -290,7 +303,7 @@ export default function OrganizationDashboard({
                     )}
 
                     <div className="grid grid-cols-2 gap-3 pt-2">
-                      <button onClick={() => { setEditingEvent(event); setNamaEvent(event.nama_event); setTanggalEvent(event.tanggal_event); setDeskripsiEvent(event.deskripsi || ''); setTargetDana(event.target_dana); setActiveTab('buat-event'); }}
+                      <button onClick={() => { setEditingEvent(event); setProposalFile(null); setCreateError(''); setNamaEvent(event.nama_event); setTanggalEvent(event.tanggal_event); setDeskripsiEvent(event.deskripsi || ''); setTargetDana(event.target_dana); setActiveTab('buat-event'); }}
                         className="py-2.5 bg-[#f8fafc] hover:bg-gray-100 text-[#1a2c4d] font-bold text-[11px] rounded-xl border border-gray-100 flex items-center justify-center gap-1.5">
                         <Edit3 className="h-3.5 w-3.5" /> Edit
                       </button>
@@ -325,15 +338,15 @@ export default function OrganizationDashboard({
                 <textarea rows={4} required value={deskripsiEvent} onChange={(e) => setDeskripsiEvent(e.target.value)} className="w-full px-4 py-3 text-xs bg-[#f8fafc] border border-gray-100 rounded-xl focus:outline-none resize-none" /></div>
               <div className="space-y-1"><label className="text-xs font-bold text-gray-700">Target Dana (Rp) <span className="text-red-500">*</span></label>
                 <input type="number" required value={targetDana} onChange={(e) => setTargetDana(parseInt(e.target.value) || 0)} className="w-full px-4 py-3 text-xs bg-[#f8fafc] border border-gray-100 rounded-xl focus:outline-none" /></div>
-              {!editingEvent && (
-                <div className="space-y-1.5"><label className="text-xs font-bold text-gray-700">Upload Proposal (.pdf)</label>
+                <div className="space-y-1.5"><label htmlFor="event-proposal" className="text-xs font-bold text-gray-700">Upload Proposal (.pdf) <span className="text-red-500">*</span></label>
+                  <p className="text-xs text-gray-500">Wajib sebelum event diterbitkan. File PDF maksimal 10 MB.</p>
+                  {editingEvent?.url_proposal && <a href={editingEvent.url_proposal} target="_blank" rel="noreferrer" className="text-xs text-blue-700 underline">Lihat proposal tersimpan (pilih file untuk mengganti)</a>}
                   <div className="border border-dashed border-gray-200 hover:border-blue-900/30 bg-[#f8fafc] rounded-2xl p-6 text-center relative cursor-pointer">
-                    <input type="file" accept="application/pdf,.pdf" onChange={(e) => setProposalFile(e.target.files?.[0] || null)} className="absolute inset-0 opacity-0 cursor-pointer" />
+                    <input id="event-proposal" key={editingEvent?.id_event ?? 'new'} type="file" required={!editingEvent?.url_proposal && !proposalFile} accept="application/pdf,.pdf" onChange={(e) => setProposalFile(e.target.files?.[0] || null)} className="absolute inset-0 opacity-0 cursor-pointer" />
                     <FileText className="h-8 w-8 text-gray-400 mx-auto mb-2" />
                     <p className="text-xs font-bold text-gray-500">{proposalFile ? proposalFile.name : 'Ketuk untuk memilih file PDF'}</p>
                   </div>
                 </div>
-              )}
               <div className="grid grid-cols-2 gap-3 pt-4">
                 <button type="button" onClick={() => { setActiveTab('manajemen'); setEditingEvent(null); }} className="py-3 bg-white text-gray-500 font-bold text-xs rounded-xl border border-gray-100 hover:bg-gray-50">Batal</button>
                 <button type="submit" disabled={createLoading} className="py-3 bg-[#1a2c4d] hover:bg-[#15233e] text-white font-bold text-xs rounded-xl disabled:opacity-50">
