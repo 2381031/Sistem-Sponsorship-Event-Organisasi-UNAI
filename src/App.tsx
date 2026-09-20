@@ -5,7 +5,6 @@ import AuthScreen from './components/AuthScreen';
 import OrganizationDashboard from './components/OrganizationDashboard';
 import SponsorDashboard from './components/SponsorDashboard';
 import AdminDashboard from './components/AdminDashboard';
-import NotificationPanel from './components/NotificationPanel';
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
@@ -171,7 +170,6 @@ export default function App() {
 
   return (
     <div id="app-root-container" className="min-h-screen min-h-[100dvh] bg-slate-50 flex flex-col font-sans">
-      {currentUser?.peran === 'Organisasi' && <NotificationPanel key={currentUser.id} />}
       {currentUser && dataError && (
         <div role="alert" className="border-b border-red-200 bg-red-50 p-4 text-sm text-red-800">
           <p>Data belum berhasil dimuat. Tampilan kosong belum berarti data Anda terhapus.</p>

@@ -43,12 +43,6 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
 export const api = {
   clearToken,
-  async getNotifications() {
-    return request<any[]>('/notifications');
-  },
-  async readNotification(id: number) {
-    return request<any>(`/notifications/${id}/read`, { method: 'PATCH' });
-  },
 
   // ---- AUTH ----
   async register(data: {

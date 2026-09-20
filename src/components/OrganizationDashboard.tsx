@@ -55,12 +55,6 @@ export default function OrganizationDashboard({
 
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
 
-  const [uploadingDocEventId, setUploadingDocEventId] = useState<number | null>(null);
-  const [docFile, setDocFile] = useState<File | null>(null);
-  const [docLoading, setDocLoading] = useState(false);
-  const [docError, setDocError] = useState('');
-  const [docSuccess, setDocSuccess] = useState('');
-
   const myEvents = events.filter(e => e.id_organisasi === currentUser.id);
   const myEventIds = myEvents.map(e => e.id_event);
   const totalEvents = myEvents.length;
@@ -181,29 +175,6 @@ export default function OrganizationDashboard({
     }
   };
 
-  const handleUploadDocSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!uploadingDocEventId || !docFile || docLoading) return;
-    setDocError('');
-    if (!/\.(jpe?g|pdf|mp4)$/i.test(docFile.name) || docFile.size > 4 * 1024 * 1024) {
-      setDocError('Pilih file JPG, PDF, atau MP4 maksimal 4 MB.');
-      return;
-    }
-    setDocLoading(true);
-    try {
-      const data = new FormData();
-      data.append('id_event', String(uploadingDocEventId));
-      data.append('file', docFile);
-      await onUploadDoc(data);
-      setDocSuccess('Dokumentasi berhasil diunggah!');
-      setTimeout(() => { setDocSuccess(''); setUploadingDocEventId(null); setDocFile(null); }, 2000);
-    } catch (err: any) {
-      setDocError(err.message || 'Gagal mengunggah LPJ');
-    } finally {
-      setDocLoading(false);
-    }
-  };
-
   return (
     <div className="bg-[#f8fafc] min-h-screen">
       <div className="bg-[#1a2c4d] text-white px-4 md:px-6 py-3 md:py-4 flex items-center justify-between shadow-md shrink-0">
@@ -311,20 +282,7 @@ export default function OrganizationDashboard({
                       <div><p className="text-[9px] text-gray-400 font-bold">Target Dana</p><h5 className="text-xs font-bold text-slate-700">{formatIDR(event.target_dana)}</h5></div>
                     </div>
 
-                    <button type="button" disabled={docLoading} onClick={() => { setUploadingDocEventId(event.id_event); setDocFile(null); setDocError(''); setDocSuccess(''); }} className="text-xs font-bold text-blue-700 hover:underline disabled:opacity-50">Upload Dokumentasi / LPJ</button>
                     <DocumentGallery docs={docs.filter(doc => doc.id_event === event.id_event)} />
-                    {uploadingDocEventId === event.id_event && (
-                      <div className="bg-slate-50 border border-gray-100 rounded-2xl p-4 mt-2 space-y-3">
-                        <div className="flex justify-between items-center"><h4 className="text-xs font-bold text-[#1a2c4d]">Upload LPJ</h4><button onClick={() => setUploadingDocEventId(null)} className="text-gray-400 text-xs">Batal</button></div>
-                        {docSuccess && <p className="text-xs text-green-600 font-bold">{docSuccess}</p>}
-                        <form key={event.id_event} onSubmit={handleUploadDocSubmit} className="space-y-2">
-                          <p className="text-xs text-gray-500">JPG, PDF, atau MP4, maksimal 4 MB per berkas.</p>
-                          <input type="file" required accept="image/jpeg,application/pdf,video/mp4,.jpg,.jpeg,.pdf,.mp4" onChange={(e) => { setDocFile(e.target.files?.[0] || null); setDocError(''); }} className="text-xs" />
-                          {docError && <p role="alert" className="text-xs text-red-600">{docError}</p>}
-                          <button type="submit" disabled={docLoading} className="w-full py-1.5 bg-[#1a2c4d] text-white text-[10px] font-bold rounded-lg disabled:opacity-50">{docLoading ? 'Mengunggah...' : 'Kirim LPJ'}</button>
-                        </form>
-                      </div>
-                    )}
 
                     <div className="grid grid-cols-2 gap-3 pt-2">
                       <button onClick={() => { setEditingEvent(event); setProposalFile(null); setCreateError(''); setNamaEvent(event.nama_event); setTanggalEvent(event.tanggal_event); setDeskripsiEvent(event.deskripsi || ''); setTargetDana(event.target_dana); setActiveTab('buat-event'); }}

@@ -1,7 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import pool from '../database';
 import { closeFundedEvents, sponsorshipAmount } from '../events/funding';
-import { ensureNotifications } from '../common/notifications';
 import { SponsorFile, mergeMaterials } from './package-materials';
 import { ensureSponsorFiles, validateMaterials } from './sponsor-files';
 
@@ -106,7 +105,6 @@ export class TransaksiService {
     data: { jumlah?: number; bukti_pembayaran?: string; id_paket?: number; sponsor_files?: SponsorFile[] },
   ) {
     const original = await this.findOne(id);
-    await ensureNotifications();
     const client = await pool.connect();
     try {
     await client.query('BEGIN');
@@ -131,8 +129,6 @@ export class TransaksiService {
     const result = await client.query(`UPDATE transaksi_sponsorship SET id_paket = $1, nama_paket = $2,
       jumlah = $3, bukti_pembayaran = $4, sponsor_files = $6::jsonb WHERE id_transaksi = $5 RETURNING *`,
       [paket.id_paket, paket.nama_paket, amount, data.bukti_pembayaran ?? transaksi.bukti_pembayaran, id, JSON.stringify(materials)]);
-    await client.query('INSERT INTO notifications (id_pengguna, message) VALUES ($1, $2)',
-      [event.id_organisasi, `Sponsorship #${id} untuk ${event.nama_event} diperbarui oleh sponsor. Paket: ${paket.nama_paket}, nominal: Rp ${amount.toLocaleString('id-ID')}. Menunggu verifikasi admin.`]);
     await client.query('COMMIT');
     return result.rows[0];
     } catch (error) {

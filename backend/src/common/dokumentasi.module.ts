@@ -1,10 +1,9 @@
 import { Module } from '@nestjs/common';
 import { DokumentasiController } from './dokumentasi.controller';
 import { DokumentasiService } from './dokumentasi.service';
-import { NotificationsController } from './notifications.controller';
 
 @Module({
-  controllers: [DokumentasiController, NotificationsController],
+  controllers: [DokumentasiController],
   providers: [DokumentasiService],
   exports: [DokumentasiService],
 })
