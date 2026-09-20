@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { User, Event, SponsorshipTransaction, EventDoc } from './types';
+import { User, Event, SponsorshipTransaction, EventDoc, Notification } from './types';
 import { api } from './api';
 import AuthScreen from './components/AuthScreen';
 import OrganizationDashboard from './components/OrganizationDashboard';
@@ -16,6 +16,7 @@ export default function App() {
   const [transactions, setTransactions] = useState<SponsorshipTransaction[]>([]);
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [docs, setDocs] = useState<EventDoc[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [dataError, setDataError] = useState<string | null>(null);
 
@@ -23,17 +24,19 @@ export default function App() {
     if (!currentUser) return;
     setDataError(null);
     try {
-      const [evts, txs, users, allDocs, profile] = await Promise.all([
+      const [evts, txs, users, allDocs, profile, userNotifications] = await Promise.all([
         api.getEvents(),
         api.getTransactions(),
         currentUser.peran === 'Admin' ? api.getUsers() : Promise.resolve([]),
         api.getAllDocs(),
         api.getUser(currentUser.id),
+        api.getNotifications(),
       ]);
       setEvents(evts);
       setTransactions(txs);
       setAllUsers(users);
       setDocs(allDocs);
+      setNotifications(userNotifications);
       setCurrentUser(previous => previous?.id === profile.id && JSON.stringify(previous) !== JSON.stringify(profile) ? profile : previous);
       if (currentUser.peran === 'Sponsor') {
         const organizationIds = [...new Set(evts.map(event => event.id_organisasi))];
@@ -84,6 +87,7 @@ export default function App() {
     setTransactions([]);
     setAllUsers([]);
     setDocs([]);
+    setNotifications([]);
     setDataError(null);
   };
 
@@ -157,6 +161,13 @@ export default function App() {
     setTransactions(txs);
   };
 
+  const handleReadNotification = async (id: number) => {
+    await api.readNotification(id);
+    setNotifications(previous => previous.map(notification => notification.id === id
+      ? { ...notification, read_at: new Date().toISOString() }
+      : notification));
+  };
+
   if (loading && currentUser) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
@@ -190,6 +201,8 @@ export default function App() {
                 events={events}
                 transactions={transactions}
                 docs={docs}
+                notifications={notifications}
+                onReadNotification={handleReadNotification}
                 onCreateEvent={handleCreateEvent}
                 onUpdateEvent={handleUpdateEvent}
                 onUpdateEventStatus={handleUpdateEventStatus}
@@ -203,6 +216,8 @@ export default function App() {
                 transactions={transactions}
                 docs={docs}
                 allUsers={allUsers}
+                notifications={notifications}
+                onReadNotification={handleReadNotification}
                 onAddTransaction={handleAddTransaction}
                 onUpdateTransaction={handleUpdateTransaction}
                 onLogout={handleLogout}
@@ -218,6 +233,8 @@ export default function App() {
                 onDeleteUser={handleDeleteUser}
                 onApprovePayment={handleApprovePayment}
                 onRejectPayment={handleRejectPayment}
+                notifications={notifications}
+                onReadNotification={handleReadNotification}
                 onLogout={handleLogout}
               />
             )

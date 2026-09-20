@@ -30,7 +30,8 @@ CREATE TABLE sponsor (
   id_pengguna INTEGER PRIMARY KEY REFERENCES users(id_pengguna) ON DELETE CASCADE,
   nama_perusahaan VARCHAR(255) NOT NULL,
   alamat TEXT,
-  no_telp VARCHAR(50)
+  no_telp VARCHAR(50),
+  website VARCHAR(500)
 );
 
 CREATE TABLE event (
@@ -75,4 +76,12 @@ CREATE TABLE dokumentasi (
   id_pengguna INTEGER REFERENCES users(id_pengguna) ON DELETE CASCADE,
   url_file VARCHAR(500),
   tipe_file VARCHAR(50) DEFAULT 'pdf'
+);
+
+CREATE TABLE notifications (
+  id SERIAL PRIMARY KEY,
+  id_pengguna INTEGER NOT NULL REFERENCES users(id_pengguna) ON DELETE CASCADE,
+  message TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  read_at TIMESTAMPTZ
 );

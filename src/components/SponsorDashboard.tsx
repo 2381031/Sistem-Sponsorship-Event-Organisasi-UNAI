@@ -76,6 +76,7 @@ export default function SponsorDashboard({ currentUser, events, transactions, do
   const [profileEmail, setProfileEmail] = useState(currentUser.email);
   const [profileNoTelp, setProfileNoTelp] = useState(profil?.no_telp || '');
   const [profileAlamat, setProfileAlamat] = useState(profil?.alamat || '');
+  const [profileWebsite, setProfileWebsite] = useState(profil?.website || '');
   const [profileDeskripsi, setProfileDeskripsi] = useState('');
   const [profileSuccess, setProfileSuccess] = useState('');
   const [profileLoading, setProfileLoading] = useState(false);
@@ -83,6 +84,7 @@ export default function SponsorDashboard({ currentUser, events, transactions, do
     setProfileNama(profil?.nama_perusahaan || '');
     setProfileNoTelp(profil?.no_telp || '');
     setProfileAlamat(profil?.alamat || '');
+    setProfileWebsite(profil?.website || '');
     setProfileEmail(currentUser.email);
   }, [profil, currentUser.email]);
 
@@ -107,7 +109,7 @@ export default function SponsorDashboard({ currentUser, events, transactions, do
     setProfileLoading(true);
     try {
       await api.updateUser(currentUser.id, {
-        sponsorDetails: { nama_perusahaan: profileNama, alamat: profileAlamat, no_telp: profileNoTelp },
+        sponsorDetails: { nama_perusahaan: profileNama, alamat: profileAlamat, no_telp: profileNoTelp, website: profileWebsite.trim() },
       });
       setProfileSuccess('Profil berhasil diperbarui!');
       setTimeout(() => setProfileSuccess(''), 3000);
@@ -394,6 +396,8 @@ export default function SponsorDashboard({ currentUser, events, transactions, do
                 <input type="text" required value={profileNoTelp} onChange={(e) => setProfileNoTelp(e.target.value)} className="w-full px-4 py-3 text-xs bg-white border border-gray-100 rounded-xl focus:outline-none" /></div>
               <div className="space-y-1"><label className="text-xs font-bold text-gray-700">Alamat <span className="text-red-500">*</span></label>
                 <input type="text" required value={profileAlamat} onChange={(e) => setProfileAlamat(e.target.value)} className="w-full px-4 py-3 text-xs bg-white border border-gray-100 rounded-xl focus:outline-none" /></div>
+              <div className="space-y-1"><label className="text-xs font-bold text-gray-700">Website Perusahaan</label>
+                <input type="url" value={profileWebsite} onChange={(e) => setProfileWebsite(e.target.value)} className="w-full px-4 py-3 text-xs bg-white border border-gray-100 rounded-xl focus:outline-none" placeholder="https://www.perusahaan.com" /></div>
               <button type="submit" disabled={profileLoading} className="w-full py-3 bg-[#1a2c4d] hover:bg-[#15233e] text-white font-bold text-xs rounded-xl shadow-md mt-4 disabled:opacity-50">
                 {profileLoading ? 'Menyimpan...' : 'Update Profil'}
               </button>

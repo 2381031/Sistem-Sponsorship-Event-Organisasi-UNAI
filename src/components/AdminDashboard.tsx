@@ -84,6 +84,7 @@ export default function AdminDashboard({
                       {account.peran === 'Organisasi' && <p><span className="font-semibold text-gray-400 w-16 inline-block">Bank:</span> {account.profil?.nama_bank || '-'}</p>}
                       {account.peran === 'Organisasi' && <p><span className="font-semibold text-gray-400 w-16 inline-block">Rekening:</span> {account.profil?.nomor_rekening} a.n. {account.profil?.nama_rekening}</p>}
                       {account.peran === 'Sponsor' && <p><span className="font-semibold text-gray-400 w-16 inline-block">Alamat:</span> {account.profil?.alamat}</p>}
+                      {account.peran === 'Sponsor' && account.profil?.website && <p><span className="font-semibold text-gray-400 w-16 inline-block">Website:</span> <a href={account.profil.website} target="_blank" rel="noreferrer" className="text-blue-700 hover:underline break-all">{account.profil.website}</a></p>}
                     </div>
                     <div className="grid grid-cols-2 gap-3 pt-2">
                       <button disabled={actionLoading} onClick={() => void runAction(() => onApproveUser(account.id), 'Akun berhasil disetujui.')} className="py-2.5 px-4 bg-[#22c55e] hover:bg-emerald-600 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all">
@@ -149,6 +150,20 @@ export default function AdminDashboard({
                       <div><h3 className="text-xs font-extrabold text-[#1a2c4d]">Detail Transaksi</h3><p className="text-[10px] text-gray-400 mt-0.5 font-mono">ID: #{tx.id_transaksi}</p></div>
                       <span className="bg-yellow-100 text-yellow-700 text-[8px] font-extrabold px-2 py-0.5 rounded-full font-mono uppercase">PENDING</span>
                     </div>
+                    {(() => {
+                      const event = events.find(e => e.id_event === tx.id_event);
+                      const proposalUrl = event?.url_proposal;
+                      return proposalUrl ? (
+                        <div className="rounded-xl border border-blue-100 bg-blue-50 p-3">
+                          <p className="text-[10px] font-extrabold uppercase text-gray-500 mb-1">Proposal Dokumentasi Event</p>
+                          <a href={proposalUrl} target="_blank" rel="noreferrer" className="text-xs font-bold text-blue-700 hover:underline break-all">{proposalUrl}</a>
+                        </div>
+                      ) : (
+                        <div className="rounded-xl border border-dashed border-gray-200 bg-slate-50 p-3 text-[10px] text-gray-400 italic">
+                          Proposal event belum tersedia untuk transaksi ini.
+                        </div>
+                      );
+                    })()}
                     <div className="grid grid-cols-1 gap-2 text-xs">
                       <p><span className="w-16 font-semibold text-gray-400 inline-block">Donatur:</span> <span className="font-bold text-[#1a2c4d]">{tx.nama_sponsor || `Sponsor #${tx.id_sponsor}`}</span></p>
                       <p><span className="w-16 font-semibold text-gray-400 inline-block">Jumlah:</span> <span className="font-extrabold text-[#1a2c4d]">{formatIDR(tx.jumlah)}</span></p>

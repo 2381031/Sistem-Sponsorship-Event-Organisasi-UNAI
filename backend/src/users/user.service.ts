@@ -33,10 +33,10 @@ export class UserService {
 
       if (dto.peran === 'Sponsor' && dto.sponsorDetails) {
         await client.query(
-          `INSERT INTO sponsor (id_pengguna, nama_perusahaan, alamat, no_telp)
-           VALUES ($1, $2, $3, $4)`,
+          `INSERT INTO sponsor (id_pengguna, nama_perusahaan, alamat, no_telp, website)
+           VALUES ($1, $2, $3, $4, $5)`,
           [user.id_pengguna, dto.sponsorDetails.nama_perusahaan,
-           dto.sponsorDetails.alamat || null, dto.sponsorDetails.no_telp],
+           dto.sponsorDetails.alamat || null, dto.sponsorDetails.no_telp, dto.sponsorDetails.website || null],
         );
       }
 
@@ -66,7 +66,7 @@ export class UserService {
       `SELECT u.id_pengguna as id, u.email, u.peran, u.status_akun,
               o.nama_organisasi, o.no_telp as org_no_telp, o.deskripsi as org_deskripsi,
               o.nama_bank, o.nama_rekening, o.nomor_rekening,
-              s.nama_perusahaan, s.alamat, s.no_telp as spon_no_telp
+              s.nama_perusahaan, s.alamat, s.no_telp as spon_no_telp, s.website as spon_website
        FROM users u
        LEFT JOIN organisasi o ON u.id_pengguna = o.id_pengguna
        LEFT JOIN sponsor s ON u.id_pengguna = s.id_pengguna
@@ -81,7 +81,7 @@ export class UserService {
       profil: r.peran === 'Organisasi'
         ? { nama_organisasi: r.nama_organisasi, deskripsi: r.org_deskripsi, no_telp: r.org_no_telp, nama_bank: r.nama_bank, nama_rekening: r.nama_rekening, nomor_rekening: r.nomor_rekening }
         : r.peran === 'Sponsor'
-          ? { nama_perusahaan: r.nama_perusahaan, alamat: r.alamat, no_telp: r.spon_no_telp }
+          ? { nama_perusahaan: r.nama_perusahaan, alamat: r.alamat, no_telp: r.spon_no_telp, website: r.spon_website }
           : null,
     }));
   }
@@ -133,8 +133,8 @@ export class UserService {
 
       if (dto.sponsorDetails && user.peran === 'Sponsor') {
         await client.query(
-          `UPDATE sponsor SET nama_perusahaan = $1, alamat = $2, no_telp = $3 WHERE id_pengguna = $4`,
-          [dto.sponsorDetails.nama_perusahaan, dto.sponsorDetails.alamat || null, dto.sponsorDetails.no_telp, id],
+          `UPDATE sponsor SET nama_perusahaan = $1, alamat = $2, no_telp = $3, website = $4 WHERE id_pengguna = $5`,
+          [dto.sponsorDetails.nama_perusahaan, dto.sponsorDetails.alamat || null, dto.sponsorDetails.no_telp, dto.sponsorDetails.website || null, id],
         );
       }
 

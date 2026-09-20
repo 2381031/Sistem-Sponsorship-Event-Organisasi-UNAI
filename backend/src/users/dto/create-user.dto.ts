@@ -32,5 +32,6 @@ export class CreateUserDto {
     nama_perusahaan: string;
     alamat?: string;
     no_telp: string;
+    website?: string;
   };
 }

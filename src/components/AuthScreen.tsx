@@ -30,6 +30,7 @@ export default function AuthScreen({ onLoginSuccess, onRegisterUser }: AuthScree
   const [sponPassword, setSponPassword] = useState('');
   const [sponNoTelp, setSponNoTelp] = useState('');
   const [sponAlamat, setSponAlamat] = useState('');
+  const [sponWebsite, setSponWebsite] = useState('');
   const [sponDeskripsi, setSponDeskripsi] = useState('');
 
   const [registerError, setRegisterError] = useState('');
@@ -99,13 +100,14 @@ export default function AuthScreen({ onLoginSuccess, onRegisterUser }: AuthScree
           nama_perusahaan: sponNama,
           alamat: sponAlamat,
           no_telp: sponNoTelp,
+          website: sponWebsite.trim(),
         },
       });
       setRegisterSuccess('Pendaftaran berhasil! Akun Anda sedang menunggu verifikasi admin.');
       setTimeout(() => {
         setRegisterSuccess('');
         setCurrentStep('login');
-        setSponNama(''); setSponEmail(''); setSponPassword(''); setSponNoTelp(''); setSponAlamat(''); setSponDeskripsi('');
+        setSponNama(''); setSponEmail(''); setSponPassword(''); setSponNoTelp(''); setSponAlamat(''); setSponWebsite(''); setSponDeskripsi('');
       }, 3000);
     } catch (err: any) {
       setRegisterError(err.message || 'Pendaftaran gagal');
@@ -291,6 +293,10 @@ export default function AuthScreen({ onLoginSuccess, onRegisterUser }: AuthScree
             <div className="space-y-1">
               <label className="text-xs font-bold text-gray-700">Alamat <span className="text-red-500">*</span></label>
               <input type="text" required placeholder="Jl. Sudirman No. 123" value={sponAlamat} onChange={(e) => setSponAlamat(e.target.value)} className="w-full px-4 py-3 text-xs bg-[#f8fafc] border border-gray-100 rounded-xl focus:outline-none" />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-gray-700">Website Perusahaan</label>
+              <input type="url" placeholder="https://www.perusahaan.com" value={sponWebsite} onChange={(e) => setSponWebsite(e.target.value)} className="w-full px-4 py-3 text-xs bg-[#f8fafc] border border-gray-100 rounded-xl focus:outline-none" />
             </div>
             <div className="space-y-1">
               <label className="text-xs font-bold text-gray-700">Deskripsi Perusahaan</label>
