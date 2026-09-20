@@ -202,7 +202,7 @@ export default function SponsorDashboard({ currentUser, events, transactions, do
                     </div>
                     {event.url_proposal && !event.url_proposal.includes('fakepath') && (
                       <a href={event.url_proposal} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-700 hover:underline">
-                        <FileText className="h-3.5 w-3.5" /> Lihat Proposal
+                        <FileText className="h-3.5 w-3.5" /> Lihat Proposal Dokumentasi Event
                       </a>
                     )}
                     <div className="space-y-1.5">
@@ -370,8 +370,8 @@ export default function SponsorDashboard({ currentUser, events, transactions, do
                     ) : <button type="button" disabled={editLoading} onClick={() => { setEditingId(tx.id_transaksi); setEditMaterials({}); setEditPackageId(String(tx.id_paket)); setEditAmount(String(tx.jumlah)); setEditProof(null); setEditError(''); setEditSuccess(''); }} className="text-xs font-bold text-blue-700 hover:underline">Edit Sponsorship</button>
                   )}
                   <div className="space-y-2 pt-2 border-t border-gray-50">
-                    <p className="text-xs text-gray-500 font-bold">Proposal Event</p>
-                    {proposalUrl ? <a href={proposalUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-xs font-bold text-blue-700 hover:underline"><FileText className="h-4 w-4" /> Lihat Proposal Event</a> : <p className="text-xs text-gray-400">Proposal belum tersedia.</p>}
+                    <p className="text-xs text-gray-500 font-bold">Proposal Dokumentasi Event</p>
+                    {proposalUrl ? <a href={proposalUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-xs font-bold text-blue-700 hover:underline"><FileText className="h-4 w-4" /> Lihat Proposal Dokumentasi Event</a> : <p className="text-xs text-gray-400">Proposal dokumentasi event belum tersedia.</p>}
                   </div>
                   <DocumentGallery docs={eventDocs} />
                   <MaterialFiles files={tx.sponsor_files} />

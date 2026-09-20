@@ -93,11 +93,11 @@ export default function OrganizationDashboard({
     setCreateError('');
     setCreateSuccess('');
     if (!proposalFile && !editingEvent?.url_proposal) {
-      setCreateError('Upload proposal PDF sebelum menerbitkan event.');
+      setCreateError('Upload Proposal Dokumentasi Event PDF sebelum menerbitkan event.');
       return;
     }
     if (proposalFile && (!proposalFile.name.toLowerCase().endsWith('.pdf') || (proposalFile.type && proposalFile.type !== 'application/pdf') || proposalFile.size > 10 * 1024 * 1024)) {
-      setCreateError('Proposal harus berupa file PDF maksimal 10 MB.');
+      setCreateError('Proposal Dokumentasi Event harus berupa file PDF maksimal 10 MB.');
       return;
     }
     setCreateLoading(true);
@@ -321,9 +321,9 @@ export default function OrganizationDashboard({
                 <textarea rows={4} required value={deskripsiEvent} onChange={(e) => setDeskripsiEvent(e.target.value)} className="w-full px-4 py-3 text-xs bg-[#f8fafc] border border-gray-100 rounded-xl focus:outline-none resize-none" /></div>
               <div className="space-y-1"><label className="text-xs font-bold text-gray-700">Target Dana (Rp) <span className="text-red-500">*</span></label>
                 <input type="number" required value={targetDana} onChange={(e) => setTargetDana(parseInt(e.target.value) || 0)} className="w-full px-4 py-3 text-xs bg-[#f8fafc] border border-gray-100 rounded-xl focus:outline-none" /></div>
-                <div className="space-y-1.5"><label htmlFor="event-proposal" className="text-xs font-bold text-gray-700">Upload Proposal (.pdf) <span className="text-red-500">*</span></label>
+                <div className="space-y-1.5"><label htmlFor="event-proposal" className="text-xs font-bold text-gray-700">Upload Proposal Dokumentasi Event (.pdf) <span className="text-red-500">*</span></label>
                   <p className="text-xs text-gray-500">Wajib sebelum event diterbitkan. File PDF maksimal 10 MB.</p>
-                  {editingEvent?.url_proposal && <a href={editingEvent.url_proposal} target="_blank" rel="noreferrer" className="text-xs text-blue-700 underline">Lihat proposal tersimpan (pilih file untuk mengganti)</a>}
+                  {editingEvent?.url_proposal && <a href={editingEvent.url_proposal} target="_blank" rel="noreferrer" className="text-xs text-blue-700 underline">Lihat proposal dokumentasi event tersimpan (pilih file untuk mengganti)</a>}
                   <div className="border border-dashed border-gray-200 hover:border-blue-900/30 bg-[#f8fafc] rounded-2xl p-6 text-center relative cursor-pointer">
                     <input id="event-proposal" key={editingEvent?.id_event ?? 'new'} type="file" required={!editingEvent?.url_proposal && !proposalFile} accept="application/pdf,.pdf" onChange={(e) => setProposalFile(e.target.files?.[0] || null)} className="absolute inset-0 opacity-0 cursor-pointer" />
                     <FileText className="h-8 w-8 text-gray-400 mx-auto mb-2" />
