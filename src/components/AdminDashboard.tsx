@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { User, Event, SponsorshipTransaction } from '../types';
+import { User, Event, SponsorshipTransaction, Notification } from '../types';
 import { api } from '../api';
-import { Users, ShieldCheck, Landmark, Trash2, Check, X, FileText, LogOut } from 'lucide-react';
+import NotificationSection from './NotificationSection';
+import { Users, ShieldCheck, Landmark, Trash2, Check, X, FileText, LogOut, Bell } from 'lucide-react';
 
 interface Props {
   currentUser: User;
@@ -13,14 +14,16 @@ interface Props {
   onDeleteUser: (userId: number) => Promise<void>;
   onApprovePayment: (txId: number) => Promise<void>;
   onRejectPayment: (txId: number) => Promise<void>;
+  notifications: Notification[];
+  onReadNotification: (id: number) => Promise<void>;
   onLogout: () => void;
 }
 
 export default function AdminDashboard({
   currentUser, allUsers, events, transactions,
-  onApproveUser, onRejectUser, onDeleteUser, onApprovePayment, onRejectPayment, onLogout
+  onApproveUser, onRejectUser, onDeleteUser, onApprovePayment, onRejectPayment, notifications, onReadNotification, onLogout
 }: Props) {
-  const [activeTab, setActiveTab] = useState<'verifikasi' | 'pengguna' | 'pembayaran'>('verifikasi');
+  const [activeTab, setActiveTab] = useState<'verifikasi' | 'pengguna' | 'pembayaran' | 'notifikasi'>('verifikasi');
   const [actionMessage, setActionMessage] = useState('');
   const [actionError, setActionError] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
@@ -208,10 +211,11 @@ export default function AdminDashboard({
             )}
           </div>
         )}
+        {activeTab === 'notifikasi' && <NotificationSection notifications={notifications} onRead={onReadNotification} />}
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 w-full max-w-6xl mx-auto bg-white border-t border-gray-100 px-4 py-2 flex justify-around shadow-[0_-4px_20px_rgba(0,0,0,0.03)] z-40">
-        {([['verifikasi', 'Verifikasi', ShieldCheck], ['pengguna', 'Pengguna', Users], ['pembayaran', 'Pembayaran', Landmark]] as const).map(([tab, label, Icon]) => (
+        {([['verifikasi', 'Verifikasi', ShieldCheck], ['pengguna', 'Pengguna', Users], ['pembayaran', 'Pembayaran', Landmark], ['notifikasi', 'Notifikasi', Bell]] as const).map(([tab, label, Icon]) => (
           <button key={tab} onClick={() => setActiveTab(tab)}
             className={`flex flex-col items-center justify-center py-1 ${activeTab === tab ? 'text-[#1a2c4d]' : 'text-gray-400'}`}>
             <Icon className={`h-5 w-5 ${activeTab === tab ? 'stroke-[2.5]' : 'stroke-[1.8]'}`} />

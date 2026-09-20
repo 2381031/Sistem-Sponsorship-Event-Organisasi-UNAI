@@ -1,3 +1,4 @@
+DROP TABLE IF EXISTS notifications CASCADE;
 DROP TABLE IF EXISTS dokumentasi CASCADE;
 DROP TABLE IF EXISTS transaksi_sponsorship CASCADE;
 DROP TABLE IF EXISTS paket_sponsorship CASCADE;
@@ -78,7 +79,7 @@ CREATE TABLE dokumentasi (
   tipe_file VARCHAR(50) DEFAULT 'pdf'
 );
 
-CREATE TABLE notifications (
+CREATE TABLE IF NOT EXISTS notifications (
   id SERIAL PRIMARY KEY,
   id_pengguna INTEGER NOT NULL REFERENCES users(id_pengguna) ON DELETE CASCADE,
   message TEXT NOT NULL,

@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { User, Event, SponsorshipTransaction, EventDoc } from '../types';
+import { User, Event, SponsorshipTransaction, EventDoc, Notification } from '../types';
 import { api } from '../api';
 import DocumentGallery, { documentUrl } from './DocumentGallery';
+import NotificationSection from './NotificationSection';
 import { MaterialInputs, MaterialFiles, MaterialSelection, attachMaterials, validateSelection } from './SponsorMaterials';
 import {
   Search, ArrowLeft, Check, Edit2, FileText, Upload, Landmark, History,
   User as UserIcon, Calendar, MapPin, Building, ShieldAlert, CheckCircle2,
-  FolderOpen, DollarSign, LogOut
+  FolderOpen, DollarSign, LogOut, Bell
 } from 'lucide-react';
 
 interface Props {
@@ -15,14 +16,16 @@ interface Props {
   transactions: SponsorshipTransaction[];
   docs: EventDoc[];
   allUsers: User[];
+  notifications: Notification[];
+  onReadNotification: (id: number) => Promise<void>;
   onAddTransaction: (data: any) => Promise<void>;
   onUpdateTransaction: (id: number, data: FormData) => Promise<void>;
   onLogout: () => void;
 }
 
-export default function SponsorDashboard({ currentUser, events, transactions, docs, allUsers, onAddTransaction, onUpdateTransaction, onLogout }: Props) {
+export default function SponsorDashboard({ currentUser, events, transactions, docs, allUsers, notifications, onReadNotification, onAddTransaction, onUpdateTransaction, onLogout }: Props) {
   const profil = currentUser.profil;
-  const [activeTab, setActiveTab] = useState<'browse' | 'riwayat' | 'profil'>('browse');
+  const [activeTab, setActiveTab] = useState<'browse' | 'riwayat' | 'profil' | 'notifikasi'>('browse');
   const [currentStep, setCurrentStep] = useState<'list' | 'pilih-paket' | 'bukti-bayar'>('list');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
@@ -404,6 +407,7 @@ export default function SponsorDashboard({ currentUser, events, transactions, do
             </form>
           </div>
         )}
+        {activeTab === 'notifikasi' && <NotificationSection notifications={notifications} onRead={onReadNotification} />}
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 w-full bg-white border-t border-gray-100 px-4 py-2 flex justify-around shadow-[0_-4px_20px_rgba(0,0,0,0.03)] z-40 max-w-6xl mx-auto">
@@ -413,6 +417,9 @@ export default function SponsorDashboard({ currentUser, events, transactions, do
             <Icon className="h-5 w-5" /><span className="text-[10px] font-bold">{label}</span>
           </button>
         ))}
+        <button onClick={() => { setActiveTab('notifikasi'); setCurrentStep('list'); }} className={`flex flex-col items-center gap-1 py-1 ${activeTab === 'notifikasi' ? 'text-[#1a2c4d]' : 'text-gray-400'}`}>
+          <Bell className="h-5 w-5" /><span className="text-[10px] font-bold">Notifikasi</span>
+        </button>
       </div>
     </div>
   );

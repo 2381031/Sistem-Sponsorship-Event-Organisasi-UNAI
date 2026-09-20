@@ -45,6 +45,7 @@ export interface SponsorshipTransaction {
   tanggal_transaksi: string;
   nama_event?: string;
   nama_sponsor?: string;
+  website_sponsor?: string | null;
   nama_paket?: string;
   rekening_tujuan?: string;
   nama_pengirim?: string;
