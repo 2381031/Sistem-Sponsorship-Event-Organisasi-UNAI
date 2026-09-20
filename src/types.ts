@@ -26,12 +26,14 @@ export interface Event {
   tanggal_event: string;
   deskripsi: string | null;
   target_dana: number;
+  dana_terkumpul?: number | string;
   url_proposal: string | null;
   status_event: EventStatus;
   paket_tersedia: SponsorshipPackage[];
 }
 
 export interface SponsorshipTransaction {
+  sponsor_files?: import('../backend/src/sponsorships/package-materials').SponsorFile[];
   id_transaksi: number;
   id_event: number;
   id_sponsor: number;

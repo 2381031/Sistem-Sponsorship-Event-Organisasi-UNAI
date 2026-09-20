@@ -50,6 +50,7 @@ async function saveProposal(file?: any): Promise<string | null> {
   return `/api/uploads/proposals/${filename}`;
 }
 
+@UseGuards(JwtAuthGuard)
 @Controller('events')
 export class EventController {
   constructor(private readonly eventService: EventService) {}
@@ -77,13 +78,16 @@ export class EventController {
   }
 
   @Get()
-  async findAll() {
-    return this.eventService.findAll();
+  async findAll(@Request() req: any) {
+    return this.eventService.findAll(req.user);
   }
 
   @Get(':id')
-  async findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.eventService.findOne(id);
+  async findOne(@Param('id', ParseIntPipe) id: number, @Request() req: any) {
+    const events = await this.eventService.findAll(req.user);
+    const event = events.find(event => event.id_event === id);
+    if (!event) throw new ForbiddenException('Event tidak tersedia untuk akun ini');
+    return event;
   }
 
   @UseGuards(JwtAuthGuard)
@@ -112,7 +116,9 @@ export class EventController {
 
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
-  async delete(@Param('id', ParseIntPipe) id: number) {
+  async delete(@Param('id', ParseIntPipe) id: number, @Request() req: any) {
+    const event = await this.eventService.findOne(id);
+    if (req.user.peran !== 'Admin' && event.id_organisasi !== req.user.id_pengguna) throw new ForbiddenException('Anda bukan pemilik event ini');
     await this.eventService.delete(id);
     return { message: 'Event deleted' };
   }

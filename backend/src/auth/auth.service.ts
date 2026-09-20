@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ConflictException, BadRequestException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import bcryptjs from 'bcryptjs';
 import { UserService } from '../users/user.service';
@@ -14,6 +14,7 @@ export class AuthService {
   ) {}
 
   async register(dto: CreateUserDto) {
+    if (!['Organisasi', 'Sponsor'].includes(dto.peran)) throw new BadRequestException('Pendaftaran hanya untuk Organisasi atau Sponsor');
     const existing = await this.userService.findByEmail(dto.email);
     if (existing) throw new ConflictException('Email sudah terdaftar');
 
@@ -36,6 +37,7 @@ export class AuthService {
 
     if (user.status_akun === 'Ditolak')
       throw new UnauthorizedException('Akun ditolak oleh administrator');
+    if (user.status_akun !== 'Aktif') throw new UnauthorizedException('Akun belum aktif');
 
     const payload = { sub: user.id_pengguna, email: user.email, role: user.peran };
     const accessToken = this.jwtService.sign(payload);

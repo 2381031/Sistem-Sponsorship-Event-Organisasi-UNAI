@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { User, Event, SponsorshipTransaction, EventDoc } from '../types';
 import { api } from '../api';
+import DocumentGallery, { documentUrl } from './DocumentGallery';
+import { MaterialInputs, MaterialFiles, MaterialSelection, attachMaterials, validateSelection } from './SponsorMaterials';
 import {
   Search, ArrowLeft, Check, Edit2, FileText, Upload, Landmark, History,
   User as UserIcon, Calendar, MapPin, Building, ShieldAlert, CheckCircle2,
@@ -14,10 +16,11 @@ interface Props {
   docs: EventDoc[];
   allUsers: User[];
   onAddTransaction: (data: any) => Promise<void>;
+  onUpdateTransaction: (id: number, data: FormData) => Promise<void>;
   onLogout: () => void;
 }
 
-export default function SponsorDashboard({ currentUser, events, transactions, docs, allUsers, onAddTransaction, onLogout }: Props) {
+export default function SponsorDashboard({ currentUser, events, transactions, docs, allUsers, onAddTransaction, onUpdateTransaction, onLogout }: Props) {
   const profil = currentUser.profil;
   const [activeTab, setActiveTab] = useState<'browse' | 'riwayat' | 'profil'>('browse');
   const [currentStep, setCurrentStep] = useState<'list' | 'pilih-paket' | 'bukti-bayar'>('list');
@@ -30,6 +33,44 @@ export default function SponsorDashboard({ currentUser, events, transactions, do
   const [successMsg, setSuccessMsg] = useState('');
   const [submitLoading, setSubmitLoading] = useState(false);
   const [customAmount, setCustomAmount] = useState('');
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editPackageId, setEditPackageId] = useState('');
+  const [editAmount, setEditAmount] = useState('');
+  const [editProof, setEditProof] = useState<File | null>(null);
+  const [editError, setEditError] = useState('');
+  const [editSuccess, setEditSuccess] = useState('');
+  const [editLoading, setEditLoading] = useState(false);
+  const [materials, setMaterials] = useState<MaterialSelection>({});
+  const [editMaterials, setEditMaterials] = useState<MaterialSelection>({});
+
+  const handleEdit = async (e: React.FormEvent, tx: SponsorshipTransaction, event: Event) => {
+    e.preventDefault();
+    if (editLoading) return;
+    setEditError('');
+    const paket = event.paket_tersedia.find(p => p.id_paket === Number(editPackageId));
+    if (!paket) { setEditError('Pilih paket sponsorship.'); return; }
+    const materialError = validateSelection(paket, editMaterials, editProof, tx.sponsor_files);
+    if (materialError) { setEditError(materialError); return; }
+    const amount = Number(paket.persentase_dana) > 0
+      ? Math.round(Number(event.target_dana) * Number(paket.persentase_dana)) / 100 : Number(editAmount);
+    if (!Number.isFinite(amount) || amount <= 0) { setEditError('Nominal harus lebih dari nol.'); return; }
+    if (editProof && (!editProof.type.startsWith('image/') || editProof.size > 5 * 1024 * 1024)) {
+      setEditError('Bukti pembayaran harus berupa gambar maksimal 5 MB.'); return;
+    }
+    const data = new FormData();
+    data.append('id_paket', String(paket.id_paket));
+    data.append('jumlah', String(amount));
+    if (editProof) data.append('bukti_pembayaran', editProof);
+    attachMaterials(data, editMaterials);
+    setEditLoading(true);
+    try {
+      await onUpdateTransaction(tx.id_transaksi, data);
+      setEditingId(null);
+      setEditProof(null);
+      setEditSuccess('Sponsorship diperbarui dan masih menunggu persetujuan Admin.');
+    } catch (err: any) { setEditError(err.message || 'Gagal memperbarui sponsorship.'); }
+    finally { setEditLoading(false); }
+  };
 
   const [profileNama, setProfileNama] = useState(profil?.nama_perusahaan || '');
   const [profileEmail, setProfileEmail] = useState(currentUser.email);
@@ -38,6 +79,12 @@ export default function SponsorDashboard({ currentUser, events, transactions, do
   const [profileDeskripsi, setProfileDeskripsi] = useState('');
   const [profileSuccess, setProfileSuccess] = useState('');
   const [profileLoading, setProfileLoading] = useState(false);
+  useEffect(() => {
+    setProfileNama(profil?.nama_perusahaan || '');
+    setProfileNoTelp(profil?.no_telp || '');
+    setProfileAlamat(profil?.alamat || '');
+    setProfileEmail(currentUser.email);
+  }, [profil, currentUser.email]);
 
   const openEvents = events.filter(e => {
     const status = String(e.status_event || '').trim().toLowerCase();
@@ -84,7 +131,9 @@ export default function SponsorDashboard({ currentUser, events, transactions, do
     setErrorMsg('');
     if (!buktiFile) { setErrorMsg('Pilih file bukti transfer.'); return; }
     if (!selectedEvent || !selectedPackage) return;
-    if (selectedPackage.persentase_dana === 0 && (!customAmount || Number(customAmount) <= 0)) { setErrorMsg('Masukkan jumlah donasi.'); return; }
+    const materialError = validateSelection(selectedPackage, materials, buktiFile);
+    if (materialError) { setErrorMsg(materialError); return; }
+    if (Number(selectedPackage.persentase_dana) === 0 && (!customAmount || Number(customAmount) <= 0)) { setErrorMsg('Masukkan jumlah donasi.'); return; }
     setSubmitLoading(true);
 
     try {
@@ -100,8 +149,10 @@ export default function SponsorDashboard({ currentUser, events, transactions, do
       fd.append('nama_sponsor', profileNama);
       fd.append('nama_paket', selectedPackage.nama_paket);
       fd.append('bukti_pembayaran', buktiFile);
+      attachMaterials(fd, materials);
 
       await onAddTransaction(fd);
+      setMaterials({});
       setSuccessMsg('Bukti transfer berhasil dikirim! Menunggu verifikasi admin.');
       setTimeout(() => { setSuccessMsg(''); setCurrentStep('list'); setActiveTab('riwayat'); resetBukti(); setCustomAmount(''); setSelectedPackage(null); setSelectedEvent(null); }, 2500);
     } catch (err: any) { setErrorMsg(err.message); }
@@ -141,7 +192,7 @@ export default function SponsorDashboard({ currentUser, events, transactions, do
               {openEvents.map(event => {
                 const eventTxs = transactions.filter(t => t.id_event === event.id_event);
                 const eventApproved = eventTxs.filter(t => t.status_pembayaran === 'Diverifikasi');
-                const eventCollected = eventApproved.reduce((sum, t) => sum + t.jumlah, 0);
+                const eventCollected = Number(event.dana_terkumpul ?? 0);
                 const progressPct = event.target_dana > 0 ? Math.min(100, Math.round((eventCollected / event.target_dana) * 100)) : 0;
                 return (
                   <div key={event.id_event} className="bg-white rounded-3xl border border-gray-100 p-5 shadow-sm space-y-4">
@@ -162,7 +213,7 @@ export default function SponsorDashboard({ currentUser, events, transactions, do
                         <span className="text-red-500 font-bold">Sisa: {formatIDR(Math.max(0, event.target_dana - eventCollected))}</span>
                       </div>
                     </div>
-                    <button onClick={() => { setSelectedEvent(event); setSelectedPackage(event.paket_tersedia?.[0] || null); setCurrentStep('pilih-paket'); }}
+                    <button onClick={() => { setMaterials({}); setSelectedEvent(event); setSelectedPackage(event.paket_tersedia?.[0] || null); setCurrentStep('pilih-paket'); }}
                       className="text-xs font-extrabold text-[#1a2c4d] hover:underline">Lihat Detail &gt;</button>
                   </div>
                 );
@@ -182,12 +233,13 @@ export default function SponsorDashboard({ currentUser, events, transactions, do
               <p className="text-[11px] text-[#1a2c4d] font-bold">Target: {formatIDR(selectedEvent.target_dana)}</p>
             </div>
             {selectedEvent.status_event === 'Ditutup' && <div className="p-4 rounded-xl bg-yellow-50 border border-yellow-100 text-yellow-800 text-sm font-bold">Event sudah ditutup.</div>}
+            <DocumentGallery docs={docs.filter(doc => doc.id_event === selectedEvent.id_event)} />
             <div className="space-y-4">
               {selectedEvent.paket_tersedia?.map(pkg => {
                 const isSelected = selectedPackage?.id_paket === pkg.id_paket;
                 const disabled = selectedEvent.status_event === 'Ditutup';
                 return (
-                  <div key={pkg.id_paket} onClick={() => !disabled && setSelectedPackage(pkg)}
+                  <div key={pkg.id_paket} onClick={() => { if (!disabled) { setMaterials({}); setSelectedPackage(pkg); } }}
                     className={`bg-white rounded-3xl p-5 border cursor-pointer transition-all space-y-3 ${disabled ? 'opacity-60 cursor-not-allowed' : ''} ${isSelected ? 'border-yellow-400 ring-2 ring-yellow-400/20' : 'border-gray-100'}`}>
                     <div className="flex justify-between items-start">
                       <div><h4 className="text-sm font-extrabold text-slate-800">{pkg.nama_paket}</h4>
@@ -221,7 +273,7 @@ export default function SponsorDashboard({ currentUser, events, transactions, do
               <span className="text-gray-400 font-bold">Paket dipilih</span>
               <span className="font-extrabold text-[#1a2c4d] uppercase font-mono">{selectedPackage.nama_paket}</span>
             </div>
-            {selectedPackage.persentase_dana === 0 && (
+            {Number(selectedPackage.persentase_dana) === 0 && (
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-gray-700">Jumlah Donasi (Rp) <span className="text-red-500">*</span></label>
                 <input type="number" min="0" required placeholder="Masukkan jumlah donasi"
@@ -230,6 +282,7 @@ export default function SponsorDashboard({ currentUser, events, transactions, do
               </div>
             )}
             <form onSubmit={handleUploadPayment} className="space-y-4">
+              <MaterialInputs key={selectedPackage.id_paket} paket={selectedPackage} value={materials} onChange={setMaterials} />
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-gray-700">Upload Bukti Transfer</label>
                 <div className="border border-dashed border-gray-200 rounded-2xl p-6 text-center bg-[#f8fafc] relative cursor-pointer">
@@ -270,14 +323,20 @@ export default function SponsorDashboard({ currentUser, events, transactions, do
         {activeTab === 'riwayat' && (
           <div className="space-y-6">
             <div className="text-center mb-6"><h2 className="text-xl font-bold text-[#1a2c4d]">Riwayat Sponsorship Saya</h2></div>
+            {editSuccess && <p role="status" className="rounded-xl bg-green-50 p-3 text-xs text-green-700">{editSuccess}</p>}
             <p className="text-xs text-gray-400 font-bold">Total: {myTransactions.length} sponsorship</p>
             <div className="space-y-4">
-              {myTransactions.map(tx => (
+              {myTransactions.map(tx => {
+                const event = events.find(event => event.id_event === tx.id_event);
+                const proposalUrl = documentUrl(event?.url_proposal);
+                const eventDocs = docs.filter(doc => doc.id_event === tx.id_event);
+                const editPackage = event?.paket_tersedia.find(p => p.id_paket === Number(editPackageId));
+                return (
                 <div key={tx.id_transaksi} className="bg-white rounded-3xl border border-gray-100 p-5 shadow-sm space-y-4">
                   <div className="flex justify-between items-start">
                     <h3 className="text-base font-bold text-[#1a2c4d]">{tx.nama_event || `Event #${tx.id_event}`}</h3>
                     <span className={`px-2.5 py-0.5 rounded text-[10px] font-bold uppercase ${tx.status_pembayaran === 'Diverifikasi' ? 'bg-[#e2f6ec] text-[#2ebd7d]' : 'bg-[#fffbeb] text-[#d97706]'}`}>
-                      {tx.status_pembayaran === 'Diverifikasi' ? 'DIVERIFIKASI' : 'MENUNGGU'}
+                      {tx.status_pembayaran.toUpperCase()}
                     </span>
                   </div>
                   <div className="grid grid-cols-2 gap-x-4 gap-y-3 pt-3 border-t border-gray-50 text-xs">
@@ -285,18 +344,39 @@ export default function SponsorDashboard({ currentUser, events, transactions, do
                     <div><p className="text-gray-400 font-medium">Jumlah</p><p className="font-extrabold text-[#1a2c4d] mt-0.5 font-mono">{formatIDR(tx.jumlah)}</p></div>
                     <div><p className="text-gray-400 font-medium">Tanggal</p><p className="font-bold text-gray-700 mt-0.5">{new Date(tx.tanggal_transaksi).toLocaleDateString('id-ID')}</p></div>
                   </div>
-                  {tx.status_pembayaran === 'Diverifikasi' && docs.filter(d => d.id_event === tx.id_event).length > 0 && (
-                    <div className="space-y-2 pt-2 border-t border-gray-50">
-                      <p className="text-[10px] text-gray-400 font-bold">Dokumentasi Event</p>
-                      {docs.filter(d => d.id_event === tx.id_event).map(doc => (
-                        <div key={doc.id_dokumentasi} className="bg-emerald-50/50 p-2.5 rounded-xl border border-emerald-100 flex items-center justify-between text-xs">
-                          <span className="font-bold text-green-700 truncate">{doc.url_file}</span>
+                  {tx.status_pembayaran === 'Menunggu' && event && (
+                    editingId === tx.id_transaksi ? (
+                      <form onSubmit={e => handleEdit(e, tx, event)} className="space-y-3 rounded-xl border border-blue-100 bg-blue-50 p-3 text-xs">
+                        <p className="font-bold">Edit Sponsorship</p>
+                        <label className="block">Paket Sponsorship
+                          <select required value={editPackageId} onChange={e => { setEditPackageId(e.target.value); setEditMaterials({}); }} className="mt-1 w-full rounded-lg border p-2">
+                            {event.paket_tersedia.map(p => <option key={p.id_paket} value={p.id_paket}>{p.nama_paket}</option>)}
+                          </select>
+                        </label>
+                        {editPackage && Number(editPackage.persentase_dana) === 0 ? (
+                          <label className="block">Nominal (Rp)<input type="number" min="0.01" step="0.01" required value={editAmount} onChange={e => setEditAmount(e.target.value)} className="mt-1 w-full rounded-lg border p-2" /></label>
+                        ) : <p>Nominal: {formatIDR(Math.round(Number(event.target_dana) * Number(editPackage?.persentase_dana || 0)) / 100)}</p>}
+                        {editPackage && <MaterialInputs key={editPackage.id_paket} paket={editPackage} value={editMaterials} onChange={setEditMaterials} existing={tx.sponsor_files} />}
+                        <label className="block">Ganti bukti pembayaran (opsional, JPG/PNG)
+                          <input type="file" accept="image/*" onChange={e => setEditProof(e.target.files?.[0] || null)} className="mt-1 block w-full" />
+                        </label>
+                        <p>Pastikan bukti pembayaran sesuai nominal terbaru. Bukti sebelumnya tetap digunakan jika tidak diganti.</p>
+                        {editError && <p role="alert" className="text-red-600">{editError}</p>}
+                        <div className="flex gap-3">
+                          <button type="submit" disabled={editLoading} className="rounded-lg bg-[#1a2c4d] p-2 text-white disabled:opacity-50">{editLoading ? 'Menyimpan...' : 'Simpan Perubahan'}</button>
+                          <button type="button" disabled={editLoading} onClick={() => setEditingId(null)}>Batal</button>
                         </div>
-                      ))}
-                    </div>
+                      </form>
+                    ) : <button type="button" disabled={editLoading} onClick={() => { setEditingId(tx.id_transaksi); setEditMaterials({}); setEditPackageId(String(tx.id_paket)); setEditAmount(String(tx.jumlah)); setEditProof(null); setEditError(''); setEditSuccess(''); }} className="text-xs font-bold text-blue-700 hover:underline">Edit Sponsorship</button>
                   )}
+                  <div className="space-y-2 pt-2 border-t border-gray-50">
+                    <p className="text-xs text-gray-500 font-bold">Proposal Event</p>
+                    {proposalUrl ? <a href={proposalUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-xs font-bold text-blue-700 hover:underline"><FileText className="h-4 w-4" /> Lihat Proposal Event</a> : <p className="text-xs text-gray-400">Proposal belum tersedia.</p>}
+                  </div>
+                  <DocumentGallery docs={eventDocs} />
+                  <MaterialFiles files={tx.sponsor_files} />
                 </div>
-              ))}
+              ); })}
             </div>
           </div>
         )}

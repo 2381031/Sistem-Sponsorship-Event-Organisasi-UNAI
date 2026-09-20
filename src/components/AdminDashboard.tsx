@@ -21,6 +21,16 @@ export default function AdminDashboard({
   onApproveUser, onRejectUser, onDeleteUser, onApprovePayment, onRejectPayment, onLogout
 }: Props) {
   const [activeTab, setActiveTab] = useState<'verifikasi' | 'pengguna' | 'pembayaran'>('verifikasi');
+  const [actionMessage, setActionMessage] = useState('');
+  const [actionError, setActionError] = useState('');
+  const [actionLoading, setActionLoading] = useState(false);
+  const runAction = async (action: () => Promise<void>, message: string) => {
+    if (actionLoading) return;
+    setActionLoading(true); setActionMessage(''); setActionError('');
+    try { await action(); setActionMessage(message); }
+    catch (error: any) { setActionError(error.message || 'Tindakan gagal. Coba kembali.'); }
+    finally { setActionLoading(false); }
+  };
 
   const formatIDR = (num: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(num);
 
@@ -44,6 +54,8 @@ export default function AdminDashboard({
       </div>
 
       <div className="flex-1 max-w-6xl w-full mx-auto px-4 pt-4 md:pt-6 pb-28">
+        {actionMessage && <p role="status" className="mb-3 rounded-lg bg-green-50 p-3 text-xs text-green-700">{actionMessage}</p>}
+        {actionError && <p role="alert" className="mb-3 rounded-lg bg-red-50 p-3 text-xs text-red-700">{actionError}</p>}
         {activeTab === 'verifikasi' && (
           <div className="space-y-6">
             <div className="flex flex-col items-center text-center mt-2 mb-6">
@@ -74,10 +86,10 @@ export default function AdminDashboard({
                       {account.peran === 'Sponsor' && <p><span className="font-semibold text-gray-400 w-16 inline-block">Alamat:</span> {account.profil?.alamat}</p>}
                     </div>
                     <div className="grid grid-cols-2 gap-3 pt-2">
-                      <button onClick={() => onApproveUser(account.id)} className="py-2.5 px-4 bg-[#22c55e] hover:bg-emerald-600 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all">
+                      <button disabled={actionLoading} onClick={() => void runAction(() => onApproveUser(account.id), 'Akun berhasil disetujui.')} className="py-2.5 px-4 bg-[#22c55e] hover:bg-emerald-600 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all">
                         <Check className="h-4 w-4 stroke-[2.5]" /> Approve
                       </button>
-                      <button onClick={() => onRejectUser(account.id)} className="py-2.5 px-4 bg-white border border-red-200 text-red-600 hover:bg-red-50 font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 active:scale-95 transition-all">
+                      <button disabled={actionLoading} onClick={() => void runAction(() => onRejectUser(account.id), 'Akun ditolak.')} className="py-2.5 px-4 bg-white border border-red-200 text-red-600 hover:bg-red-50 font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 active:scale-95 transition-all">
                         <X className="h-4 w-4 stroke-[2.5]" /> Reject
                       </button>
                     </div>
@@ -109,7 +121,7 @@ export default function AdminDashboard({
                     <span className={`px-1.5 py-0.5 text-[8px] font-extrabold rounded-md uppercase ${u.peran === 'Admin' ? 'bg-red-50 text-red-600' : u.peran === 'Organisasi' ? 'bg-blue-50 text-blue-600' : 'bg-emerald-50 text-emerald-600'}`}>{u.peran}</span>
                   </div>
                   {u.peran !== 'Admin' && (
-                    <button onClick={() => { if (confirm('Hapus pengguna ini secara permanen?')) onDeleteUser(u.id); }}
+                    <button disabled={actionLoading} onClick={() => { if (confirm('Hapus pengguna ini secara permanen?')) void runAction(() => onDeleteUser(u.id), 'Pengguna berhasil dihapus.'); }}
                       className="p-2.5 text-gray-400 hover:text-red-600 rounded-xl hover:bg-red-50 active:scale-95 transition-all shrink-0">
                       <Trash2 className="h-4 w-4" />
                     </button>
@@ -168,10 +180,10 @@ export default function AdminDashboard({
                       )}
                     </div>
                     <div className="grid grid-cols-2 gap-3 pt-2">
-                      <button onClick={() => onApprovePayment(tx.id_transaksi)} className="py-2.5 px-4 bg-[#22c55e] hover:bg-emerald-600 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all">
+                      <button disabled={actionLoading} onClick={() => void runAction(() => onApprovePayment(tx.id_transaksi), 'Pembayaran diverifikasi. Event otomatis ditutup jika target dana terpenuhi.')} className="py-2.5 px-4 bg-[#22c55e] hover:bg-emerald-600 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all">
                         <Check className="h-4 w-4 stroke-[2.5]" /> Approve Bayar
                       </button>
-                      <button onClick={() => onRejectPayment(tx.id_transaksi)} className="py-2.5 px-4 bg-white border border-red-200 text-red-600 hover:bg-red-50 font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 active:scale-95 transition-all">
+                      <button disabled={actionLoading} onClick={() => void runAction(() => onRejectPayment(tx.id_transaksi), 'Pembayaran ditolak.')} className="py-2.5 px-4 bg-white border border-red-200 text-red-600 hover:bg-red-50 font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 active:scale-95 transition-all">
                         <X className="h-4 w-4 stroke-[2.5]" /> Reject Bayar
                       </button>
                     </div>

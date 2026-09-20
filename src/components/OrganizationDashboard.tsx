@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { User, Event, SponsorshipTransaction, EventDoc } from '../types';
 import { api } from '../api';
+import DocumentGallery from './DocumentGallery';
 import {
   Building2, Calendar, Target, DollarSign, UploadCloud, Users, CheckCircle2,
   Clock, AlertCircle, FileText, ChevronRight, Edit3, Trash2, Eye, Image as ImageIcon,
@@ -34,6 +35,14 @@ export default function OrganizationDashboard({
   const [profileNamaBank, setProfileNamaBank] = useState(profil?.nama_bank || '');
   const [profileSuccess, setProfileSuccess] = useState('');
   const [profileLoading, setProfileLoading] = useState(false);
+  useEffect(() => {
+    setProfileNama(profil?.nama_organisasi || '');
+    setProfileDeskripsi(profil?.deskripsi || '');
+    setProfileNoTelp(profil?.no_telp || '');
+    setProfileRekNo(profil?.nomor_rekening || '');
+    setProfileRekNama(profil?.nama_rekening || '');
+    setProfileNamaBank(profil?.nama_bank || '');
+  }, [profil]);
 
   const [namaEvent, setNamaEvent] = useState('');
   const [tanggalEvent, setTanggalEvent] = useState('');
@@ -47,8 +56,9 @@ export default function OrganizationDashboard({
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
 
   const [uploadingDocEventId, setUploadingDocEventId] = useState<number | null>(null);
-  const [docFileUrl, setDocFileUrl] = useState('');
-  const [docDesc, setDocDesc] = useState('');
+  const [docFile, setDocFile] = useState<File | null>(null);
+  const [docLoading, setDocLoading] = useState(false);
+  const [docError, setDocError] = useState('');
   const [docSuccess, setDocSuccess] = useState('');
 
   const myEvents = events.filter(e => e.id_organisasi === currentUser.id);
@@ -56,8 +66,8 @@ export default function OrganizationDashboard({
   const totalEvents = myEvents.length;
 
   const myApprovedTransactions = transactions.filter(t => myEventIds.includes(t.id_event) && t.status_pembayaran === 'Diverifikasi');
-  const totalDanaTerkumpul = myApprovedTransactions.reduce((acc, t) => acc + t.jumlah, 0);
-  const totalTargetDana = myEvents.reduce((acc, e) => acc + e.target_dana, 0);
+  const totalDanaTerkumpul = myEvents.reduce((acc, event) => acc + Number(event.dana_terkumpul ?? 0), 0);
+  const totalTargetDana = myEvents.reduce((acc, e) => acc + Number(e.target_dana), 0);
 
   const formatIDR = (num: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(num);
 
@@ -173,14 +183,25 @@ export default function OrganizationDashboard({
 
   const handleUploadDocSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!uploadingDocEventId || !docFileUrl) return;
-    await onUploadDoc({
-      id_event: uploadingDocEventId,
-      url_file: docFileUrl.replace('C:\\fakepath\\', ''),
-      tipe_file: 'PDF',
-    });
-    setDocSuccess('LPJ berhasil diunggah!');
-    setTimeout(() => { setDocSuccess(''); setUploadingDocEventId(null); setDocFileUrl(''); setDocDesc(''); }, 2000);
+    if (!uploadingDocEventId || !docFile || docLoading) return;
+    setDocError('');
+    if (!/\.(jpe?g|pdf|mp4)$/i.test(docFile.name) || docFile.size > 4 * 1024 * 1024) {
+      setDocError('Pilih file JPG, PDF, atau MP4 maksimal 4 MB.');
+      return;
+    }
+    setDocLoading(true);
+    try {
+      const data = new FormData();
+      data.append('id_event', String(uploadingDocEventId));
+      data.append('file', docFile);
+      await onUploadDoc(data);
+      setDocSuccess('Dokumentasi berhasil diunggah!');
+      setTimeout(() => { setDocSuccess(''); setUploadingDocEventId(null); setDocFile(null); }, 2000);
+    } catch (err: any) {
+      setDocError(err.message || 'Gagal mengunggah LPJ');
+    } finally {
+      setDocLoading(false);
+    }
   };
 
   return (
@@ -228,7 +249,7 @@ export default function OrganizationDashboard({
                 <div className="rounded-2xl border border-dashed border-gray-200 bg-slate-50 p-4 text-center text-[11px] text-gray-500">Belum ada sponsor terverifikasi.</div>
               ) : (
                 <div className="space-y-2">
-                  {myApprovedTransactions.slice(0, 4).map(tx => (
+                  {myApprovedTransactions.map(tx => (
                     <div key={tx.id_transaksi} className="flex items-center justify-between rounded-2xl border border-gray-100 bg-slate-50 px-3 py-2.5">
                       <div><p className="text-[11px] font-bold text-[#1a2c4d]">{tx.nama_sponsor}</p><p className="text-[9px] text-gray-400">{tx.nama_paket} - {tx.nama_event}</p></div>
                       <span className="text-[10px] font-extrabold text-emerald-600">{formatIDR(tx.jumlah)}</span>
@@ -241,7 +262,7 @@ export default function OrganizationDashboard({
             {myEvents.map(event => {
               const eventTxs = transactions.filter(t => t.id_event === event.id_event);
               const eventApprovedTxs = eventTxs.filter(t => t.status_pembayaran === 'Diverifikasi');
-              const eventCollected = eventApprovedTxs.reduce((sum, t) => sum + t.jumlah, 0);
+              const eventCollected = eventApprovedTxs.reduce((sum, t) => sum + Number(t.jumlah), 0);
               const progressPct = event.target_dana > 0 ? Math.min(100, Math.round((eventCollected / event.target_dana) * 100)) : 0;
               return (
                 <div key={event.id_event} className="bg-white rounded-3xl border border-gray-100 p-5 shadow-sm space-y-4">
@@ -278,7 +299,7 @@ export default function OrganizationDashboard({
               {myEvents.map(event => {
                 const eventTxs = transactions.filter(t => t.id_event === event.id_event);
                 const eventApprovedTxs = eventTxs.filter(t => t.status_pembayaran === 'Diverifikasi');
-                const eventCollected = eventApprovedTxs.reduce((sum, t) => sum + t.jumlah, 0);
+                const eventCollected = eventApprovedTxs.reduce((sum, t) => sum + Number(t.jumlah), 0);
                 return (
                   <div key={event.id_event} className="bg-white rounded-3xl border border-gray-100 p-5 shadow-sm space-y-4">
                     <div className="flex justify-between items-start">
@@ -290,14 +311,17 @@ export default function OrganizationDashboard({
                       <div><p className="text-[9px] text-gray-400 font-bold">Target Dana</p><h5 className="text-xs font-bold text-slate-700">{formatIDR(event.target_dana)}</h5></div>
                     </div>
 
+                    <button type="button" disabled={docLoading} onClick={() => { setUploadingDocEventId(event.id_event); setDocFile(null); setDocError(''); setDocSuccess(''); }} className="text-xs font-bold text-blue-700 hover:underline disabled:opacity-50">Upload Dokumentasi / LPJ</button>
+                    <DocumentGallery docs={docs.filter(doc => doc.id_event === event.id_event)} />
                     {uploadingDocEventId === event.id_event && (
                       <div className="bg-slate-50 border border-gray-100 rounded-2xl p-4 mt-2 space-y-3">
                         <div className="flex justify-between items-center"><h4 className="text-xs font-bold text-[#1a2c4d]">Upload LPJ</h4><button onClick={() => setUploadingDocEventId(null)} className="text-gray-400 text-xs">Batal</button></div>
                         {docSuccess && <p className="text-xs text-green-600 font-bold">{docSuccess}</p>}
-                        <form onSubmit={handleUploadDocSubmit} className="space-y-2">
-                          <input type="file" required accept=".pdf" onChange={(e) => setDocFileUrl(e.target.value)} className="text-xs" />
-                          <input type="text" placeholder="Deskripsi Laporan" value={docDesc} onChange={(e) => setDocDesc(e.target.value)} className="w-full p-2 text-xs border bg-white rounded-lg focus:outline-none" />
-                          <button type="submit" className="w-full py-1.5 bg-[#1a2c4d] text-white text-[10px] font-bold rounded-lg">Kirim LPJ</button>
+                        <form key={event.id_event} onSubmit={handleUploadDocSubmit} className="space-y-2">
+                          <p className="text-xs text-gray-500">JPG, PDF, atau MP4, maksimal 4 MB per berkas.</p>
+                          <input type="file" required accept="image/jpeg,application/pdf,video/mp4,.jpg,.jpeg,.pdf,.mp4" onChange={(e) => { setDocFile(e.target.files?.[0] || null); setDocError(''); }} className="text-xs" />
+                          {docError && <p role="alert" className="text-xs text-red-600">{docError}</p>}
+                          <button type="submit" disabled={docLoading} className="w-full py-1.5 bg-[#1a2c4d] text-white text-[10px] font-bold rounded-lg disabled:opacity-50">{docLoading ? 'Mengunggah...' : 'Kirim LPJ'}</button>
                         </form>
                       </div>
                     )}
@@ -308,8 +332,9 @@ export default function OrganizationDashboard({
                         <Edit3 className="h-3.5 w-3.5" /> Edit
                       </button>
                       <button onClick={() => handleToggleEventStatus(event)}
+                        disabled={event.status_event !== 'Dipublikasikan' && Number(event.target_dana) > 0 && eventCollected >= Number(event.target_dana)}
                         className={`py-2.5 font-bold text-[11px] rounded-xl border flex items-center justify-center gap-1.5 ${event.status_event === 'Dipublikasikan' ? 'bg-[#fff5f5] text-[#e53e3e] border-[#fed7d7]' : 'bg-emerald-50 text-emerald-600 border-emerald-100'}`}>
-                        <CheckCircle className="h-3.5 w-3.5" /> {event.status_event === 'Dipublikasikan' ? 'Tutup Event' : 'Buka Event'}
+                        <CheckCircle className="h-3.5 w-3.5" /> {event.status_event === 'Dipublikasikan' ? 'Tutup Event' : Number(event.target_dana) > 0 && eventCollected >= Number(event.target_dana) ? 'Dana Terpenuhi' : 'Buka Event'}
                       </button>
                     </div>
                   </div>

@@ -12,7 +12,7 @@ export class CreateUserDto {
   @IsString()
   nama_lengkap?: string;
 
-  @IsEnum(['Organisasi', 'Sponsor', 'Admin'] as const)
+  @IsEnum(['Organisasi', 'Sponsor'] as const)
   peran!: string;
 
   @IsOptional()

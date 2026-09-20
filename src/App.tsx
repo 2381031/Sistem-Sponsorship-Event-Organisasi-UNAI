@@ -5,6 +5,7 @@ import AuthScreen from './components/AuthScreen';
 import OrganizationDashboard from './components/OrganizationDashboard';
 import SponsorDashboard from './components/SponsorDashboard';
 import AdminDashboard from './components/AdminDashboard';
+import NotificationPanel from './components/NotificationPanel';
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
@@ -23,16 +24,18 @@ export default function App() {
     if (!currentUser) return;
     setDataError(null);
     try {
-      const [evts, txs, users, allDocs] = await Promise.all([
+      const [evts, txs, users, allDocs, profile] = await Promise.all([
         api.getEvents(),
         api.getTransactions(),
         currentUser.peran === 'Admin' ? api.getUsers() : Promise.resolve([]),
         api.getAllDocs(),
+        api.getUser(currentUser.id),
       ]);
       setEvents(evts);
       setTransactions(txs);
       setAllUsers(users);
       setDocs(allDocs);
+      setCurrentUser(previous => previous?.id === profile.id && JSON.stringify(previous) !== JSON.stringify(profile) ? profile : previous);
       if (currentUser.peran === 'Sponsor') {
         const organizationIds = [...new Set(evts.map(event => event.id_organisasi))];
         const organizations = await Promise.all(organizationIds.map(id => api.getUser(id)));
@@ -51,6 +54,14 @@ export default function App() {
     } else {
       setLoading(false);
     }
+  }, [currentUser, loadAllData]);
+
+  useEffect(() => {
+    if (!currentUser) return;
+    const refresh = () => { if (document.visibilityState === 'visible') void loadAllData(); };
+    const timer = window.setInterval(refresh, 30000);
+    window.addEventListener('focus', refresh);
+    return () => { window.clearInterval(timer); window.removeEventListener('focus', refresh); };
   }, [currentUser, loadAllData]);
 
   useEffect(() => {
@@ -111,6 +122,11 @@ export default function App() {
     setTransactions(txs);
   };
 
+  const handleUpdateTransaction = async (id: number, data: FormData) => {
+    await api.updateTransaction(id, data);
+    setTransactions(await api.getTransactions());
+  };
+
   const handleApproveUser = async (userId: number) => {
     await api.updateUserStatus(userId, 'Aktif');
     const users = await api.getUsers();
@@ -131,8 +147,9 @@ export default function App() {
 
   const handleApprovePayment = async (txId: number) => {
     await api.verifyTransaction(txId, 'Diverifikasi');
-    const txs = await api.getTransactions();
+    const [txs, evts] = await Promise.all([api.getTransactions(), api.getEvents()]);
     setTransactions(txs);
+    setEvents(evts);
   };
 
   const handleRejectPayment = async (txId: number) => {
@@ -154,6 +171,7 @@ export default function App() {
 
   return (
     <div id="app-root-container" className="min-h-screen min-h-[100dvh] bg-slate-50 flex flex-col font-sans">
+      {currentUser?.peran === 'Organisasi' && <NotificationPanel key={currentUser.id} />}
       {currentUser && dataError && (
         <div role="alert" className="border-b border-red-200 bg-red-50 p-4 text-sm text-red-800">
           <p>Data belum berhasil dimuat. Tampilan kosong belum berarti data Anda terhapus.</p>
@@ -188,6 +206,7 @@ export default function App() {
                 docs={docs}
                 allUsers={allUsers}
                 onAddTransaction={handleAddTransaction}
+                onUpdateTransaction={handleUpdateTransaction}
                 onLogout={handleLogout}
               />
             ) : (

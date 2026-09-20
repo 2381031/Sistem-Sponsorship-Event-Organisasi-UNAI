@@ -43,6 +43,12 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
 export const api = {
   clearToken,
+  async getNotifications() {
+    return request<any[]>('/notifications');
+  },
+  async readNotification(id: number) {
+    return request<any>(`/notifications/${id}/read`, { method: 'PATCH' });
+  },
 
   // ---- AUTH ----
   async register(data: {
@@ -132,7 +138,8 @@ export const api = {
   },
 
   async updateTransaction(id: number, data: any) {
-    return request<any>(`/sponsorships/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
+    const body = data instanceof FormData ? data : JSON.stringify(data);
+    return request<any>(`/sponsorships/${id}`, { method: 'PATCH', body });
   },
 
   async verifyTransaction(id: number, status: string) {
@@ -149,7 +156,8 @@ export const api = {
   },
 
   async createDoc(data: any) {
-    return request<any>('/dokumentasi', { method: 'POST', body: JSON.stringify(data) });
+    const body = data instanceof FormData ? data : JSON.stringify(data);
+    return request<any>('/dokumentasi', { method: 'POST', body });
   },
 
   async deleteDoc(id: number) {

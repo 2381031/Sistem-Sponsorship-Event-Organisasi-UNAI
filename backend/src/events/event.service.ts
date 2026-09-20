@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import pool from '../database';
+import { closeFundedEvents } from './funding';
 
 @Injectable()
 export class EventService {
@@ -14,6 +15,7 @@ export class EventService {
     paket_tersedia?: Array<{ nama_paket: string; persentase_dana: number; deskripsi_keuntungan?: string }>;
   }) {
     if (!data.url_proposal?.trim()) throw new BadRequestException('Upload proposal PDF sebelum menerbitkan event');
+    if (!Number.isFinite(Number(data.target_dana)) || Number(data.target_dana) <= 0) throw new BadRequestException('Target dana harus lebih dari nol');
     const orgResult = await pool.query('SELECT id_pengguna FROM organisasi WHERE id_pengguna = $1', [data.id_pengguna]);
     if (orgResult.rows.length === 0) throw new BadRequestException('Profil organisasi tidak ditemukan');
 
@@ -50,8 +52,14 @@ export class EventService {
     }
   }
 
-  async findAll() {
-    const evResult = await pool.query('SELECT * FROM event ORDER BY id_event DESC');
+  async findAll(user: any) {
+    await closeFundedEvents(pool);
+    const evResult = await pool.query(`SELECT e.*,
+      (SELECT COALESCE(SUM(t.jumlah), 0) FROM transaksi_sponsorship t WHERE t.id_event = e.id_event AND t.status_pembayaran = 'Diverifikasi') AS dana_terkumpul
+      FROM event e WHERE $1 = 'Admin' OR e.id_organisasi = $2
+      OR ($1 = 'Sponsor' AND (e.status_event IN ('Dipublikasikan', 'published', 'open', 'terbuka', 'Ditutup', 'closed')
+        OR EXISTS (SELECT 1 FROM transaksi_sponsorship t WHERE t.id_event = e.id_event AND t.id_sponsor = $2)))
+      ORDER BY e.id_event DESC`, [user.peran, user.id_pengguna]);
     const events: any[] = [];
     for (const ev of evResult.rows) {
       const paketResult = await pool.query('SELECT * FROM paket_sponsorship WHERE id_event = $1', [ev.id_event]);
@@ -73,7 +81,15 @@ export class EventService {
   }
 
   async update(id: number, data: any) {
-    const event = await this.findOne(id);
+    if (data.status_event !== undefined && !['Draft', 'Dipublikasikan', 'Ditutup'].includes(data.status_event)) throw new BadRequestException('Status event tidak valid');
+    const client = await pool.connect();
+    try {
+    await client.query('BEGIN');
+    const event = (await client.query('SELECT * FROM event WHERE id_event = $1 FOR UPDATE', [id])).rows[0];
+    if (!event) throw new NotFoundException('Event tidak ditemukan');
+    if (data.target_dana !== undefined && (!Number.isFinite(Number(data.target_dana)) || Number(data.target_dana) <= 0)) {
+      throw new BadRequestException('Target dana harus lebih dari nol');
+    }
     if ((data.status_event ?? event.status_event) === 'Dipublikasikan' && !(data.url_proposal ?? event.url_proposal)?.trim()) {
       throw new BadRequestException('Upload proposal PDF sebelum menerbitkan event');
     }
@@ -81,15 +97,21 @@ export class EventService {
     const values: any[] = [];
     let idx = 1;
     for (const [key, val] of Object.entries(data)) {
-      if (key === 'paket_tersedia' || key === 'id_event') continue;
+      if (!['nama_event', 'tanggal_event', 'deskripsi', 'target_dana', 'url_proposal', 'status_event'].includes(key)) continue;
       fields.push(`${key} = $${idx}`);
       values.push(val);
       idx++;
     }
     if (fields.length > 0) {
       values.push(id);
-      await pool.query(`UPDATE event SET ${fields.join(', ')} WHERE id_event = $${idx}`, values);
+      await client.query(`UPDATE event SET ${fields.join(', ')} WHERE id_event = $${idx}`, values);
     }
+    await closeFundedEvents(client, id);
+    await client.query('COMMIT');
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally { client.release(); }
     return this.findOne(id);
   }
 
@@ -98,8 +120,7 @@ export class EventService {
     if (status === 'Dipublikasikan' && !event.url_proposal?.trim()) {
       throw new BadRequestException('Lengkapi proposal PDF melalui Edit Event sebelum membuka event');
     }
-    await pool.query('UPDATE event SET status_event = $1 WHERE id_event = $2', [status, id]);
-    return this.findOne(id);
+    return this.update(id, { status_event: status });
   }
 
   async delete(id: number) {

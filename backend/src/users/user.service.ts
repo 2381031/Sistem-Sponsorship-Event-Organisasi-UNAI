@@ -102,7 +102,7 @@ export class UserService {
   async updateStatus(id: number, status: string, adminId?: number) {
     await this.findById(id);
     await pool.query('UPDATE users SET status_akun = $1 WHERE id_pengguna = $2', [status, id]);
-    return this.findById(id);
+    return this.findByIdWithProfile(id);
   }
 
   async update(id: number, dto: UpdateUserDto) {

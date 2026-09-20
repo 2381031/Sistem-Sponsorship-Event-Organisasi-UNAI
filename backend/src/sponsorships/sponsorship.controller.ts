@@ -1,94 +1,40 @@
 import {
   Body, Controller, Get, Param, Patch, Post,
-  UseGuards, UseInterceptors, UploadedFile, Request, ParseIntPipe, ForbiddenException,
+  UseGuards, UseInterceptors, UploadedFiles, Request, ParseIntPipe, ForbiddenException,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage, memoryStorage } from 'multer';
-import { extname, join } from 'path';
-import { put } from '@vercel/blob';
+import { uploadSubmission, saveSubmission } from './material-upload';
 import { BadRequestException } from '@nestjs/common';
-import { existsSync, mkdirSync } from 'fs';
 import { TransaksiService } from './transaksi.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
-const buktiDir = join(process.cwd(), 'uploads', 'bukti');
-try { if (!existsSync(buktiDir)) mkdirSync(buktiDir, { recursive: true }); } catch {}
-
-const useBlob = Boolean(process.env.BLOB_READ_WRITE_TOKEN);
-const isServerless = Boolean(process.env.VERCEL);
-
-const imageOnlyFilter = (req: any, file: any, cb: any) => {
-  if (!file.mimetype.startsWith('image/')) {
-    cb(new BadRequestException('Bukti pembayaran harus berupa file gambar'), false);
-    return;
-  }
-  cb(null, true);
-};
-
-const buktiStorage = useBlob
-  ? memoryStorage()
-  : diskStorage({
-      destination: (req: any, file: any, cb: any) => {
-        if (isServerless) {
-          cb(new Error('Filesystem read-only: set environment variable BLOB_READ_WRITE_TOKEN di Vercel'));
-          return;
-        }
-        try { if (!existsSync(buktiDir)) mkdirSync(buktiDir, { recursive: true }); } catch {}
-        cb(null, buktiDir);
-      },
-      filename: (req: any, file: any, cb: any) => {
-        const unique = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-        cb(null, `bukti-${unique}${extname(file.originalname).toLowerCase()}`);
-      },
-    });
-
-async function saveBukti(file?: any): Promise<string | null> {
-  if (!file) return null;
-  if (useBlob) {
-    const unique = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-    const ext = extname(file.originalname).toLowerCase() || '.jpg';
-    const blob = await put(`bukti/bukti-${unique}${ext}`, file.buffer, {
-      access: 'public',
-      contentType: file.mimetype,
-      addRandomSuffix: false,
-    });
-    return blob.url;
-  }
-  if (isServerless) {
-    throw new BadRequestException('Storage belum dikonfigurasi: hubungkan Vercel Blob store (BLOB_READ_WRITE_TOKEN)');
-  }
-  return `/api/uploads/bukti/${file.filename}`;
-}
-
-const uploadBukti = FileInterceptor('bukti_pembayaran', {
-  storage: buktiStorage,
-  fileFilter: imageOnlyFilter,
-  limits: { fileSize: 5 * 1024 * 1024 },
-});
-
+@UseGuards(JwtAuthGuard)
 @Controller('sponsorships')
 export class TransaksiController {
   constructor(private readonly transaksiService: TransaksiService) {}
 
   @UseGuards(JwtAuthGuard)
-  @UseInterceptors(uploadBukti)
+  @UseInterceptors(uploadSubmission)
   @Post()
-  async create(@Body() body: any, @UploadedFile() file: any, @Request() req: any) {
-    return this.transaksiService.create({
+  async create(@Body() body: any, @UploadedFiles() files: Record<string, any[]>, @Request() req: any) {
+    if (req.user.peran !== 'Sponsor') throw new ForbiddenException('Hanya Sponsor yang dapat memberikan sponsorship');
+    if (!files?.bukti_pembayaran?.length) throw new BadRequestException('Upload bukti pembayaran');
+    const saved = await saveSubmission(files);
+    try { return await this.transaksiService.create({
       id_pengguna: req.user.id_pengguna,
       id_event: body.id_event,
       id_paket: body.id_paket,
       jumlah: body.jumlah,
-      bukti_pembayaran: (await saveBukti(file)) || body.bukti_pembayaran || null,
+      bukti_pembayaran: saved.proof,
+      sponsor_files: saved.materials,
       nama_event: body.nama_event,
       nama_sponsor: body.nama_sponsor,
       nama_paket: body.nama_paket,
-    });
+    }); } catch (error) { await saved.cleanup(); throw error; }
   }
 
   @Get()
-  async findAll() {
-    return this.transaksiService.findAll();
+  async findAll(@Request() req: any) {
+    return this.transaksiService.findAll(req.user);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -98,8 +44,11 @@ export class TransaksiController {
   }
 
   @Get(':id')
-  async findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.transaksiService.findOne(id);
+  async findOne(@Param('id', ParseIntPipe) id: number, @Request() req: any) {
+    const transactions = await this.transaksiService.findAll(req.user);
+    const transaction = transactions.find(t => t.id_transaksi === id);
+    if (!transaction) throw new ForbiddenException('Anda tidak memiliki akses ke transaksi ini');
+    return transaction;
   }
 
   @UseGuards(JwtAuthGuard)
@@ -112,18 +61,24 @@ export class TransaksiController {
   }
 
   @UseGuards(JwtAuthGuard)
-  @UseInterceptors(uploadBukti)
+  @UseInterceptors(uploadSubmission)
   @Patch(':id')
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() body: any,
-    @UploadedFile() file: any,
+    @UploadedFiles() files: Record<string, any[]>,
     @Request() req: any,
   ) {
-    return this.transaksiService.update(id, req.user.id_pengguna, {
+    if (req.user.peran !== 'Sponsor') throw new ForbiddenException('Hanya Sponsor pemilik transaksi yang dapat mengedit');
+    const existing = await this.transaksiService.findOne(id);
+    if (existing.id_sponsor !== req.user.id_pengguna) throw new ForbiddenException('Anda bukan pemilik transaksi');
+    if (existing.status_pembayaran !== 'Menunggu') throw new BadRequestException('Transaksi sudah diproses oleh admin');
+    const saved = await saveSubmission(files);
+    try { return await this.transaksiService.update(id, req.user.id_pengguna, {
       jumlah: body.jumlah,
-      bukti_pembayaran: (await saveBukti(file)) ?? body.bukti_pembayaran,
+      bukti_pembayaran: saved.proof,
+      sponsor_files: saved.materials,
       id_paket: body.id_paket,
-    });
+    }); } catch (error) { await saved.cleanup(); throw error; }
   }
 }
