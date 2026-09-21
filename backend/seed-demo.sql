@@ -3,6 +3,10 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 ALTER TABLE sponsor ADD COLUMN IF NOT EXISTS website VARCHAR(500);
 ALTER TABLE transaksi_sponsorship ADD COLUMN IF NOT EXISTS sponsor_files JSONB NOT NULL DEFAULT '[]'::jsonb;
+CREATE TABLE IF NOT EXISTS admin (
+  id_pengguna INTEGER PRIMARY KEY REFERENCES users(id_pengguna) ON DELETE CASCADE,
+  nama_admin VARCHAR(255) NOT NULL
+);
 
 INSERT INTO users (email, kata_sandi, nama_lengkap, peran, status_akun)
 VALUES
@@ -15,6 +19,12 @@ VALUES
   ('pending.sponsor@company.com', crypt('demo1234', gen_salt('bf')), 'PT Menunggu Verifikasi', 'Sponsor', 'Menunggu Verifikasi'),
   ('pending.org@unai.edu', crypt('demo1234', gen_salt('bf')), 'BEM UNAI', 'Organisasi', 'Menunggu Verifikasi')
 ON CONFLICT (email) DO UPDATE SET status_akun = EXCLUDED.status_akun;
+
+INSERT INTO admin (id_pengguna, nama_admin)
+SELECT id_pengguna, nama_lengkap
+FROM users
+WHERE email = 'admin@unai.edu' AND peran = 'Admin'
+ON CONFLICT (id_pengguna) DO UPDATE SET nama_admin = EXCLUDED.nama_admin;
 
 INSERT INTO organisasi (id_pengguna, nama_organisasi, deskripsi, no_telp, nama_bank, nama_rekening, nomor_rekening)
 SELECT id_pengguna, 'HIMA Teknologi Informasi', 'Organisasi demo untuk pengujian sistem sponsorship.', '081234567890', 'BCA', 'HIMA Teknologi Informasi', '1234567890'

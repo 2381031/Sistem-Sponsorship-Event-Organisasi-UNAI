@@ -16,6 +16,11 @@ CREATE TABLE users (
   id_admin_verifikator INTEGER
 );
 
+CREATE TABLE admin (
+  id_pengguna INTEGER PRIMARY KEY REFERENCES users(id_pengguna) ON DELETE CASCADE,
+  nama_admin VARCHAR(255) NOT NULL
+);
+
 CREATE TABLE organisasi (
   id_pengguna INTEGER PRIMARY KEY REFERENCES users(id_pengguna) ON DELETE CASCADE,
   nama_organisasi VARCHAR(255) NOT NULL,

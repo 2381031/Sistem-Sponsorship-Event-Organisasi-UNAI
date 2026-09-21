@@ -46,6 +46,12 @@ async function initDatabase() {
        ON CONFLICT (email) DO UPDATE SET kata_sandi = $2, peran = $4, status_akun = $5`,
       ['admin@unai.edu', adminPassword, 'Administrator', 'Admin', 'Aktif'],
     );
+    await client.query(
+      `INSERT INTO admin (id_pengguna, nama_admin)
+       SELECT id_pengguna, nama_lengkap FROM users WHERE email = $1
+       ON CONFLICT (id_pengguna) DO UPDATE SET nama_admin = EXCLUDED.nama_admin`,
+      ['admin@unai.edu'],
+    );
     console.log('Admin user berhasil dibuat (admin@unai.edu / admin3107)');
 
     client.release();
