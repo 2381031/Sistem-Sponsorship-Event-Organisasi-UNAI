@@ -9,11 +9,26 @@ DROP TABLE IF EXISTS public.notifications CASCADE;
 ALTER TABLE public.sponsor
   ADD COLUMN IF NOT EXISTS website VARCHAR(500);
 
+-- Kolom event yang dibutuhkan saat Organisasi menerbitkan proposal.
+ALTER TABLE public.event
+  ADD COLUMN IF NOT EXISTS url_proposal VARCHAR(500);
+ALTER TABLE public.event
+  ADD COLUMN IF NOT EXISTS status_event VARCHAR(50) DEFAULT 'Dipublikasikan';
+
 -- Admin memiliki tabel profil sendiri dan tetap terhubung ke users.
 CREATE TABLE IF NOT EXISTS public.admin (
   id_pengguna INTEGER PRIMARY KEY
     REFERENCES public.users(id_pengguna) ON DELETE CASCADE,
   nama_admin VARCHAR(255) NOT NULL
+);
+
+-- Dokumentasi event diperlukan oleh endpoint dashboard dan harus ada di Neon.
+CREATE TABLE IF NOT EXISTS public.dokumentasi (
+  id_dokumentasi SERIAL PRIMARY KEY,
+  id_event INTEGER REFERENCES public.event(id_event) ON DELETE CASCADE,
+  id_pengguna INTEGER REFERENCES public.users(id_pengguna) ON DELETE CASCADE,
+  url_file VARCHAR(500),
+  tipe_file VARCHAR(50) DEFAULT 'pdf'
 );
 
 INSERT INTO public.admin (id_pengguna, nama_admin)
