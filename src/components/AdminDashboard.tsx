@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { User, Event, SponsorshipTransaction } from '../types';
 import { api } from '../api';
+import { documentUrl } from './DocumentGallery';
 import { Users, ShieldCheck, Landmark, Trash2, Check, X, FileText, LogOut } from 'lucide-react';
 
 interface Props {
@@ -152,15 +153,42 @@ export default function AdminDashboard({
                     </div>
                     {(() => {
                       const event = events.find(e => e.id_event === tx.id_event);
-                      const proposalUrl = event?.url_proposal;
-                      return proposalUrl ? (
-                        <div className="rounded-xl border border-blue-100 bg-blue-50 p-3">
-                          <p className="text-[10px] font-extrabold uppercase text-gray-500 mb-1">Proposal Dokumentasi Event</p>
-                          <a href={proposalUrl} target="_blank" rel="noreferrer" className="text-xs font-bold text-blue-700 hover:underline break-all">{proposalUrl}</a>
-                        </div>
-                      ) : (
-                        <div className="rounded-xl border border-dashed border-gray-200 bg-slate-50 p-3 text-[10px] text-gray-400 italic">
-                          Proposal event belum tersedia untuk transaksi ini.
+                      const proposalUrl = documentUrl(event?.url_proposal);
+                      const organisasi = allUsers.find(user => user.id === event?.id_organisasi);
+                      return (
+                        <div className="rounded-xl border border-blue-100 bg-blue-50 p-4 space-y-3 text-xs">
+                          <h4 className="font-extrabold text-[#1a2c4d]">Proposal Event Organisasi</h4>
+                          <div className="space-y-1">
+                            <p><span className="font-semibold">Event:</span> {event?.nama_event || tx.nama_event || `Event #${tx.id_event}`}</p>
+                            <p><span className="font-semibold">Organisasi:</span> {organisasi ? getUserDisplayName(organisasi) : 'Data organisasi belum tersedia'}</p>
+                            {event && <p><span className="font-semibold">Tanggal event:</span> {new Date(event.tanggal_event).toLocaleDateString('id-ID')}</p>}
+                            <p className="whitespace-pre-line">{event?.deskripsi || 'Deskripsi event belum tersedia.'}</p>
+                          </div>
+                          {proposalUrl ? (
+                            <a href={proposalUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 font-bold text-blue-700 hover:underline">
+                              <FileText className="h-4 w-4 shrink-0" /> Buka PDF Proposal — {event?.nama_event || tx.nama_event || `Event #${tx.id_event}`}
+                            </a>
+                          ) : <p className="text-gray-500">PDF proposal event organisasi belum tersedia.</p>}
+                          <div className="border-t border-blue-200 pt-3 space-y-2">
+                            <h5 className="font-bold">Rincian Paket Sponsorship</h5>
+                            {event && <p>Target dana event: {formatIDR(Number(event.target_dana))}</p>}
+                            <p>Cocokkan nominal dan manfaat setiap paket dengan PDF proposal. Paket yang dipilih sponsor ditandai di bawah.</p>
+                            {event?.paket_tersedia?.length ? (
+                              <div className="overflow-x-auto">
+                                <table className="w-full text-left bg-white">
+                                  <thead><tr className="border-b border-blue-100"><th scope="col" className="p-2">Paket</th><th scope="col" className="p-2">Nominal paket</th><th scope="col" className="p-2">Manfaat</th></tr></thead>
+                                  <tbody>{event.paket_tersedia.map(paket => (
+                                    <tr key={paket.id_paket} className={`border-b border-blue-100 ${paket.id_paket === tx.id_paket ? 'bg-blue-100' : ''}`}>
+                                      <th scope="row" className="p-2 align-top">{paket.nama_paket}{paket.id_paket === tx.id_paket && <span className="block text-blue-700">Dipilih sponsor</span>}</th>
+                                      <td className="p-2 align-top">{Number(paket.persentase_dana) > 0 ? <>{formatIDR(Number(event.target_dana) * Number(paket.persentase_dana) / 100)}<span className="block text-gray-500">{paket.persentase_dana}% dari target dana</span></> : 'Nominal sukarela'}</td>
+                                      <td className="p-2 align-top whitespace-pre-line">{paket.deskripsi_keuntungan || 'Manfaat paket belum dicantumkan.'}</td>
+                                    </tr>
+                                  ))}</tbody>
+                                </table>
+                              </div>
+                            ) : <p className="text-gray-500">Rincian paket event belum tersedia.</p>}
+                            {event?.paket_tersedia?.length > 0 && !event.paket_tersedia.some(paket => paket.id_paket === tx.id_paket) && <p className="text-amber-800">Paket transaksi ini tidak ditemukan dalam daftar paket event saat ini.</p>}
+                          </div>
                         </div>
                       );
                     })()}

@@ -27,7 +27,7 @@ export function MaterialInputs({ paket, value, onChange, existing = [] }: {
 }) {
   const rules = packageMaterials(paket);
   return <div className="space-y-3 rounded-xl border border-blue-100 bg-blue-50 p-3 text-xs">
-    <p className="font-bold">Berkas sesuai paket sponsorship</p>
+    <p className="font-bold">Berkas pendukung sesuai paket sponsorship</p>
     {!Object.values(rules).some(Boolean) && <p>Paket ini tidak mencantumkan logo atau promosi produk; tidak ada lampiran tambahan yang diwajibkan.</p>}
     {(Object.keys(rules) as MaterialKind[]).filter(kind => rules[kind]).map(kind => <label key={kind} className="block space-y-1">
       <span className="font-bold">{labels[kind]} {kind === 'logo' ? '(wajib)' : '(opsional)'}</span>
@@ -43,8 +43,8 @@ export function MaterialInputs({ paket, value, onChange, existing = [] }: {
 
 export function MaterialFiles({ files = [] }: { files?: SponsorFile[] }) {
   return <div className="space-y-2 rounded-xl border border-gray-100 p-3 text-xs">
-    <p className="font-bold">Berkas Sponsor</p>
-    {!files.length && <p className="text-gray-500">Tidak ada berkas sponsor tersimpan.</p>}
+    <p className="font-bold">Berkas Pendukung Sponsorship</p>
+    {!files.length && <p className="text-gray-500">Belum ada berkas pendukung sponsorship yang diunggah.</p>}
     {files.map((file, index) => {
       const url = documentUrl(file.url);
       return <div key={`${file.url}-${index}`}>

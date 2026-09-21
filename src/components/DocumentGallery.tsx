@@ -12,9 +12,9 @@ export function documentUrl(value?: string | null): string | null {
 
 export default function DocumentGallery({ docs }: { docs: EventDoc[] }) {
   return <details className="rounded-xl border border-gray-100 bg-white p-3 text-xs">
-    <summary className="cursor-pointer font-bold text-blue-800">Dokumentasi / LPJ Event ({docs.length})</summary>
+    <summary className="cursor-pointer font-bold text-blue-800">Proposal Dokumentasi ({docs.length})</summary>
     <div className="mt-3 space-y-3">
-      {docs.length === 0 && <p className="text-gray-500">Organisasi belum mengunggah dokumentasi event.</p>}
+      {docs.length === 0 && <p className="text-gray-500">Organisasi belum mengunggah proposal dokumentasi.</p>}
       {docs.map((doc, index) => {
         const url = documentUrl(doc.url_file);
         const type = (doc.tipe_file || '').toUpperCase();
@@ -23,7 +23,7 @@ export default function DocumentGallery({ docs }: { docs: EventDoc[] }) {
           {!url ? <p>Berkas lama perlu diunggah ulang oleh organisasi.</p> : <>
             {['JPG', 'JPEG'].includes(type) && <img src={url} alt={`Dokumentasi event ${index + 1}`} loading="lazy" className="max-h-64 w-full rounded-lg object-contain" />}
             {type === 'MP4' && <video src={url} controls preload="none" className="max-h-64 w-full rounded-lg">Browser tidak mendukung pemutar video.</video>}
-            <a href={url} target="_blank" rel="noreferrer" className="inline-block font-bold text-blue-700 underline">Buka {type === 'PDF' ? 'Laporan PDF' : 'Berkas'}</a>
+            <a href={url} target="_blank" rel="noreferrer" className="inline-block font-bold text-blue-700 underline">Buka {type === 'PDF' ? 'Proposal Dokumentasi PDF' : 'Berkas'}</a>
           </>}
         </div>;
       })}
