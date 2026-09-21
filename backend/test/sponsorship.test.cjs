@@ -14,12 +14,7 @@ function fixture({ status = 'Menunggu', owner = 7, otherApproved = 0, amount = 2
   const query = async (sql, params = []) => {
     statements.push(sql);
     if (['BEGIN', 'COMMIT', 'ROLLBACK'].includes(sql)) return { rows: [] };
-    if (sql.startsWith('CREATE TABLE IF NOT EXISTS notifications')) return { rows: [] };
-    if (sql.startsWith('INSERT INTO notifications')) {
-      assert.equal(params[0], 10);
-      assert.match(params[1], /Event Uji.*Silver/);
-      return { rows: [] };
-    }
+    if (sql.startsWith('ALTER TABLE transaksi_sponsorship ADD COLUMN IF NOT EXISTS sponsor_files')) return { rows: [] };
     if (sql.startsWith('SELECT id_pengguna FROM sponsor')) return { rows: [{ id_pengguna: 7 }] };
     if (sql.startsWith('SELECT * FROM transaksi_sponsorship')) return { rows: [{ ...tx }] };
     if (sql.startsWith('SELECT * FROM paket_sponsorship')) return { rows: params[0] === 3 ? [{ id_paket: 3, nama_paket: 'Silver', persentase_dana: '25' }] : [] };
@@ -61,7 +56,6 @@ test('pending owner can edit; server calculates amount and keeps old proof', asy
   assert.equal(result.bukti_pembayaran, 'old.png');
   assert.equal(result.status_pembayaran, 'Menunggu');
   assert.equal(f.statements.at(-1), 'COMMIT');
-  assert.ok(f.statements.some(sql => sql.startsWith('INSERT INTO notifications')));
   assert.ok(f.released());
 });
 

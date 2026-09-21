@@ -59,10 +59,3 @@ export interface EventDoc {
   tipe_file: string | null;
 }
 
-export interface Notification {
-  id: number;
-  id_pengguna: number;
-  message: string;
-  created_at: string;
-  read_at: string | null;
-}

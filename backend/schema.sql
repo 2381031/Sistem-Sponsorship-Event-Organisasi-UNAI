@@ -1,4 +1,3 @@
-DROP TABLE IF EXISTS notifications CASCADE;
 DROP TABLE IF EXISTS dokumentasi CASCADE;
 DROP TABLE IF EXISTS transaksi_sponsorship CASCADE;
 DROP TABLE IF EXISTS paket_sponsorship CASCADE;
@@ -43,7 +42,7 @@ CREATE TABLE event (
   deskripsi TEXT,
   target_dana NUMERIC(15, 2) DEFAULT 0,
   url_proposal VARCHAR(500),
-  status_event VARCHAR(50) DEFAULT 'open'
+  status_event VARCHAR(50) DEFAULT 'Dipublikasikan'
 );
 
 CREATE TABLE paket_sponsorship (
@@ -61,7 +60,7 @@ CREATE TABLE transaksi_sponsorship (
   id_paket INTEGER REFERENCES paket_sponsorship(id_paket),
   jumlah NUMERIC(15, 2) DEFAULT 0,
   bukti_pembayaran VARCHAR(500),
-  status_pembayaran VARCHAR(50) DEFAULT 'pending_verification',
+  status_pembayaran VARCHAR(50) DEFAULT 'Menunggu',
   id_admin_verifikator INTEGER,
   tanggal_transaksi TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   nama_event VARCHAR(255),
@@ -79,10 +78,3 @@ CREATE TABLE dokumentasi (
   tipe_file VARCHAR(50) DEFAULT 'pdf'
 );
 
-CREATE TABLE IF NOT EXISTS notifications (
-  id SERIAL PRIMARY KEY,
-  id_pengguna INTEGER NOT NULL REFERENCES users(id_pengguna) ON DELETE CASCADE,
-  message TEXT NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  read_at TIMESTAMPTZ
-);

@@ -3,7 +3,6 @@ import pool from '../database';
 import { closeFundedEvents, sponsorshipAmount } from '../events/funding';
 import { SponsorFile, mergeMaterials } from './package-materials';
 import { ensureSponsorFiles, validateMaterials } from './sponsor-files';
-import { ensureNotifications } from '../common/notifications';
 
 @Injectable()
 export class TransaksiService {
@@ -19,7 +18,6 @@ export class TransaksiService {
     sponsor_files?: SponsorFile[];
   }) {
     await ensureSponsorFiles();
-    await ensureNotifications();
     const sponsorResult = await pool.query('SELECT id_pengguna FROM sponsor WHERE id_pengguna = $1', [data.id_pengguna]);
     if (sponsorResult.rows.length === 0) throw new BadRequestException('Profil sponsor tidak ditemukan');
 
@@ -44,10 +42,6 @@ export class TransaksiService {
       [data.id_event, data.id_pengguna, data.id_paket, amount,
        data.bukti_pembayaran || null,
        event.nama_event, data.nama_sponsor || null, paket.nama_paket, JSON.stringify(data.sponsor_files || [])],
-    );
-    await client.query(
-      'INSERT INTO notifications (id_pengguna, message) VALUES ($1, $2)',
-      [event.id_organisasi, `Sponsorship baru untuk ${event.nama_event} diterima. Paket: ${paket.nama_paket}, nominal: Rp ${amount.toLocaleString('id-ID')}. Menunggu verifikasi admin.`],
     );
     await client.query('COMMIT');
     return result.rows[0];
@@ -83,7 +77,6 @@ export class TransaksiService {
 
   async updateStatus(id: number, status: string) {
     if (!['Diverifikasi', 'Ditolak'].includes(status)) throw new BadRequestException('Status pembayaran tidak valid');
-    await ensureNotifications();
     const transaction = await this.findOne(id);
     const client = await pool.connect();
     try {
@@ -98,10 +91,6 @@ export class TransaksiService {
       }
       const result = await client.query("UPDATE transaksi_sponsorship SET status_pembayaran = $1 WHERE id_transaksi = $2 AND status_pembayaran = 'Menunggu' RETURNING *", [status, id]);
       if (!result.rows[0]) throw new BadRequestException('Transaksi sudah diproses oleh admin');
-      await client.query(
-        'INSERT INTO notifications (id_pengguna, message) VALUES ($1, $2)',
-        [latest.id_sponsor, `Pembayaran sponsorship untuk ${transaction.nama_event || `Event #${transaction.id_event}`} telah ${status.toLowerCase()}.`],
-      );
       await closeFundedEvents(client, transaction.id_event);
       await client.query('COMMIT');
       return result.rows[0];
@@ -117,7 +106,6 @@ export class TransaksiService {
     data: { jumlah?: number; bukti_pembayaran?: string; id_paket?: number; sponsor_files?: SponsorFile[] },
   ) {
     const original = await this.findOne(id);
-    await ensureNotifications();
     const client = await pool.connect();
     try {
     await client.query('BEGIN');
@@ -142,10 +130,6 @@ export class TransaksiService {
     const result = await client.query(`UPDATE transaksi_sponsorship SET id_paket = $1, nama_paket = $2,
       jumlah = $3, bukti_pembayaran = $4, sponsor_files = $6::jsonb WHERE id_transaksi = $5 RETURNING *`,
       [paket.id_paket, paket.nama_paket, amount, data.bukti_pembayaran ?? transaksi.bukti_pembayaran, id, JSON.stringify(materials)]);
-    await client.query(
-      'INSERT INTO notifications (id_pengguna, message) VALUES ($1, $2)',
-      [event.id_organisasi, `Sponsorship #${id} untuk ${event.nama_event} diperbarui oleh sponsor. Paket: ${paket.nama_paket}, nominal: Rp ${amount.toLocaleString('id-ID')}. Menunggu verifikasi admin.`],
-    );
     await client.query('COMMIT');
     return result.rows[0];
     } catch (error) {

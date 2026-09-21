@@ -22,7 +22,7 @@ Gunakan akun dan data simulasi tanpa pembayaran nyata. Setiap baris berikut **me
 | 12 | Sponsor | Profil: nama/telepon/alamat tersimpan setelah muat ulang. |
 | 13 | Sponsor | Melihat Event: pencarian dan detail hanya menawarkan event yang diterbitkan. |
 | 14 | Sponsor | Memberikan Sponsorship: paket biasa/Spesial dan gambar bukti menghasilkan transaksi Menunggu. |
-| 15 | Sponsor | Edit Sponsorship: paket/nominal/bukti dapat diganti ketika Menunggu; transaksi Diverifikasi/Ditolak dikunci; organisasi mendapat notifikasi. |
+| 15 | Sponsor | Edit Sponsorship: paket/nominal/bukti dapat diganti ketika Menunggu; transaksi Diverifikasi/Ditolak dikunci. |
 | 16 | Sponsor | Dokumentasi: galeri tersedia di detail sebelum sponsorship dan pada riwayat event terkait; transaksi akun lain tidak tampil. |
 | 17 | Admin | Login: akun admin aktif masuk ke menu admin. |
 | 18 | Admin | Verifikasi Akun: approve menjadi Aktif; reject menjadi Ditolak. |
@@ -34,14 +34,13 @@ Gunakan akun dan data simulasi tanpa pembayaran nyata. Setiap baris berikut **me
 - Verifikasi dana di bawah target: event tetap terbit. Tepat target atau lebih: event otomatis Ditutup. Dana Menunggu/Ditolak tidak dihitung.
 - Menurunkan target ke bawah dana terverifikasi juga menutup event. Event dengan target terpenuhi tidak bisa dibuka ulang tanpa menaikkan target.
 - Dua admin memverifikasi pembayaran bersamaan; sponsor mengedit saat admin menyetujui: tidak boleh menimpa transaksi yang telah diproses. Perlu pengujian langsung PostgreSQL untuk konkurensi.
-- Notifikasi edit tersimpan lintas login, hanya dapat dibaca penerimanya, dan dapat ditandai dibaca. Maksimal 100 notifikasi terbaru ditampilkan.
 - JPG/PDF/MP4 maksimum 4 MB. Tolak berkas kosong, tipe palsu, ukuran berlebih, dan upload oleh organisasi lain.
 - Akun tidak dapat mendaftar sebagai Admin atau menaikkan peran melalui update profil. JWT akun yang sudah ditolak/dihapus tidak berlaku.
 
 ## Validasi otomatis dan kebutuhan deployment
 
-`cd backend && npm test` menguji layanan dengan database simulasi: status sponsorship, perhitungan target, notifikasi dalam transaksi, batas peran/kepemilikan, JWT akun tidak aktif, dan validasi format dokumentasi. Pemeriksaan TypeScript dan build frontend dilakukan terpisah.
+`cd backend && npm test` menguji layanan dengan database simulasi: status sponsorship, perhitungan target, batas peran/kepemilikan, JWT akun tidak aktif, dan validasi format dokumentasi. Pemeriksaan TypeScript dan build frontend dilakukan terpisah.
 
-Uji langsung NeonDB, Vercel Blob, tampilan browser, dan 20 skenario di atas tetap diperlukan. Notifikasi memakai tabel baru yang dibuat otomatis tanpa reset data; database perlu izin CREATE. Set `BLOB_READ_WRITE_TOKEN` pada hosting untuk menyimpan berkas. Periksa batas ukuran request hosting saat menguji unggahan proposal dan bukti bayar.
+Uji langsung NeonDB, Vercel Blob, tampilan browser, dan 20 skenario di atas tetap diperlukan. Set `BLOB_READ_WRITE_TOKEN` pada hosting untuk menyimpan berkas. Periksa batas ukuran request hosting saat menguji unggahan proposal dan bukti bayar.
 
 Isi hasil user testing dengan tanggal, penguji, bukti, dan kendala sesudah benar-benar dicoba. Status Berhasil dalam jurnal harus mengikuti bukti pengujian, bukan hanya keberadaan kode.

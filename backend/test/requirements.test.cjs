@@ -11,7 +11,6 @@ const { TransaksiService } = require('../dist/sponsorships/transaksi.service');
 const { DokumentasiService } = require('../dist/common/dokumentasi.service');
 const { JwtStrategy } = require('../dist/auth/jwt.strategy');
 const { AuthService } = require('../dist/auth/auth.service');
-const { NotificationsController } = require('../dist/common/notifications.controller');
 const { GUARDS_METADATA } = require('@nestjs/common/constants');
 
 const req = (peran, id_pengguna = 7) => ({ user: { peran, id_pengguna } });
@@ -30,7 +29,7 @@ test('documentation accepts JPG/PDF/MP4 and rejects forged or oversized uploads'
 });
 
 test('all data controllers require JWT, including their GET routes', () => {
-  for (const controller of [UserController, EventController, DokumentasiController, TransaksiController, NotificationsController]) {
+  for (const controller of [UserController, EventController, DokumentasiController, TransaksiController]) {
     assert.ok(Reflect.getMetadata(GUARDS_METADATA, controller)?.length > 0);
   }
 });
@@ -57,6 +56,7 @@ test('registration cannot create an admin and stale JWT cannot access disabled a
 test('transactions use server-side role/owner filters', async () => {
   for (const role of ['Sponsor', 'Organisasi', 'Admin']) {
     pool.query = async (sql, params) => {
+      if (sql.startsWith('ALTER TABLE transaksi_sponsorship ADD COLUMN IF NOT EXISTS sponsor_files')) return { rows: [] };
       assert.deepEqual(params, [role, 7]);
       assert.match(sql, /t.id_sponsor = \$2/);
       assert.match(sql, /e.id_organisasi = \$2/);
@@ -72,12 +72,3 @@ test('non-owner cannot delete event or documentation', async () => {
   await assert.rejects(new DokumentasiService().delete(1, req('Organisasi').user), /pemilik/);
 });
 
-test('notification read checks recipient; unauthorized notification stays inaccessible', async () => {
-  pool.query = async (sql, params) => {
-    if (sql.startsWith('CREATE TABLE')) return { rows: [] };
-    assert.match(sql, /id_pengguna = \$2/);
-    assert.deepEqual(params, [10, 7]);
-    return { rows: [] };
-  };
-  await assert.rejects(new NotificationsController().read(10, req('Organisasi')), /tidak ditemukan/);
-});

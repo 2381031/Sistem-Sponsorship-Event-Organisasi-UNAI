@@ -158,12 +158,4 @@ export const api = {
     return request<any>(`/dokumentasi/${id}`, { method: 'DELETE' });
   },
 
-  // ---- NOTIFICATIONS ----
-  async getNotifications() {
-    return request<any[]>('/notifications');
-  },
-
-  async readNotification(id: number) {
-    return request<any>(`/notifications/${id}/read`, { method: 'PATCH' });
-  },
 };

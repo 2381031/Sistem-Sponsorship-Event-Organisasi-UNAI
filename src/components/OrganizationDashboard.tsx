@@ -1,13 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { User, Event, SponsorshipTransaction, EventDoc, Notification } from '../types';
+import { User, Event, SponsorshipTransaction, EventDoc } from '../types';
 import { api } from '../api';
 import DocumentGallery from './DocumentGallery';
-import NotificationSection from './NotificationSection';
 import {
   Building2, Calendar, Target, DollarSign, UploadCloud, Users, CheckCircle2,
   Clock, AlertCircle, FileText, ChevronRight, Edit3, Trash2, Eye, Image as ImageIcon,
   FileDown, Video, ShieldAlert, CheckCircle, ArrowLeft, LogOut, Check, HelpCircle, Upload,
-  LayoutDashboard, CalendarDays, UserCircle, Bell
+  LayoutDashboard, CalendarDays, UserCircle
 } from 'lucide-react';
 
 interface Props {
@@ -15,19 +14,16 @@ interface Props {
   events: Event[];
   transactions: SponsorshipTransaction[];
   docs: EventDoc[];
-  notifications: Notification[];
-  onReadNotification: (id: number) => Promise<void>;
   onCreateEvent: (data: any) => Promise<void>;
   onUpdateEvent: (id: number, data: any) => Promise<void>;
   onUpdateEventStatus: (id: number, status: string) => Promise<void>;
-  onUploadDoc: (data: any) => Promise<void>;
   onLogout: () => void;
 }
 
 export default function OrganizationDashboard({
-  currentUser, events, transactions, docs, notifications, onReadNotification, onCreateEvent, onUpdateEvent, onUpdateEventStatus, onUploadDoc, onLogout
+  currentUser, events, transactions, docs, onCreateEvent, onUpdateEvent, onUpdateEventStatus, onLogout
 }: Props) {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'manajemen' | 'buat-event' | 'profil' | 'notifikasi'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'manajemen' | 'buat-event' | 'profil'>('dashboard');
   const profil = currentUser.profil;
 
   const [profileNama, setProfileNama] = useState(profil?.nama_organisasi || '');
@@ -380,7 +376,6 @@ export default function OrganizationDashboard({
             </form>
           </div>
         )}
-        {activeTab === 'notifikasi' && <NotificationSection notifications={notifications} onRead={onReadNotification} />}
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 w-full max-w-6xl mx-auto bg-white border-t border-gray-100 px-4 py-2 flex justify-around shadow-[0_-4px_20px_rgba(0,0,0,0.03)] z-40">
@@ -388,7 +383,6 @@ export default function OrganizationDashboard({
           ['dashboard', 'Dashboard', LayoutDashboard],
           ['manajemen', 'Event', CalendarDays],
           ['profil', 'Profil', UserCircle],
-          ['notifikasi', 'Notifikasi', Bell],
         ] as const).map(([tab, label, Icon]) => (
           <button key={tab} onClick={() => { setActiveTab(tab as any); if (tab === 'manajemen') setEditingEvent(null); }}
             className={`flex flex-col items-center justify-center py-1 min-w-0 ${(activeTab === tab || (tab === 'manajemen' && activeTab === 'buat-event')) ? 'text-[#1a2c4d]' : 'text-gray-400'}`}>
