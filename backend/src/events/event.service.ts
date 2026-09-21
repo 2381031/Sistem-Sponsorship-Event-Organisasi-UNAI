@@ -60,12 +60,15 @@ export class EventService {
       OR ($1 = 'Sponsor' AND (e.status_event IN ('Dipublikasikan', 'published', 'open', 'terbuka', 'Ditutup', 'closed')
         OR EXISTS (SELECT 1 FROM transaksi_sponsorship t WHERE t.id_event = e.id_event AND t.id_sponsor = $2)))
       ORDER BY e.id_event DESC`, [user.peran, user.id_pengguna]);
-    const events: any[] = [];
-    for (const ev of evResult.rows) {
-      const paketResult = await pool.query('SELECT * FROM paket_sponsorship WHERE id_event = $1', [ev.id_event]);
-      events.push({ ...ev, paket_tersedia: paketResult.rows });
+    if (!evResult.rows.length) return [];
+    const paketResult = await pool.query('SELECT * FROM paket_sponsorship WHERE id_event = ANY($1::int[]) ORDER BY id_paket', [evResult.rows.map(event => event.id_event)]);
+    const packages = new Map<number, any[]>();
+    for (const paket of paketResult.rows) {
+      const group = packages.get(paket.id_event) || [];
+      group.push(paket);
+      packages.set(paket.id_event, group);
     }
-    return events;
+    return evResult.rows.map(event => ({ ...event, paket_tersedia: packages.get(event.id_event) || [] }));
   }
 
   async findByOrganisasi(idPengguna: number) {

@@ -44,7 +44,7 @@ export default function App() {
       console.error('Gagal memuat data:', err);
       setDataError(err instanceof Error ? err.message : 'Server tidak dapat dihubungi.');
     }
-  }, [currentUser]);
+  }, [currentUser?.id, currentUser?.peran]);
 
   useEffect(() => {
     const token = localStorage.getItem('unai_token');
@@ -53,7 +53,7 @@ export default function App() {
     } else {
       setLoading(false);
     }
-  }, [currentUser, loadAllData]);
+  }, [currentUser?.id, loadAllData]);
 
   useEffect(() => {
     if (!currentUser) return;
@@ -61,7 +61,7 @@ export default function App() {
     const timer = window.setInterval(refresh, 30000);
     window.addEventListener('focus', refresh);
     return () => { window.clearInterval(timer); window.removeEventListener('focus', refresh); };
-  }, [currentUser, loadAllData]);
+  }, [currentUser?.id, loadAllData]);
 
   useEffect(() => {
     if (currentUser) {
@@ -92,21 +92,18 @@ export default function App() {
   };
 
   const handleCreateEvent = async (eventData: any) => {
-    await api.createEvent(eventData);
-    const evts = await api.getEvents();
-    setEvents(evts);
+    const event = await api.createEvent(eventData);
+    setEvents(previous => [event, ...previous.filter(item => item.id_event !== event.id_event)]);
   };
 
   const handleUpdateEvent = async (id: number, data: any) => {
-    await api.updateEvent(id, data);
-    const evts = await api.getEvents();
-    setEvents(evts);
+    const event = await api.updateEvent(id, data);
+    setEvents(previous => previous.map(item => item.id_event === id ? { ...item, ...event } : item));
   };
 
   const handleUpdateEventStatus = async (id: number, status: string) => {
-    await api.updateEventStatus(id, status);
-    const evts = await api.getEvents();
-    setEvents(evts);
+    const event = await api.updateEventStatus(id, status);
+    setEvents(previous => previous.map(item => item.id_event === id ? { ...item, ...event } : item));
   };
 
   const handleAddTransaction = async (txData: any) => {

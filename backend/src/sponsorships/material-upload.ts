@@ -33,7 +33,8 @@ export async function saveSubmission(groups: Record<string, any[]> = {}) {
   const materials: SponsorFile[] = [];
   let proof: string | undefined;
   try {
-    for (const file of files) {
+    // Wait for every upload before cleanup, including uploads still running when one fails.
+    const results = await Promise.allSettled(files.map(async file => {
       const filename = `${randomUUID()}.${validateUpload(file)}`;
       let url: string;
       if (process.env.BLOB_READ_WRITE_TOKEN) {
@@ -49,6 +50,13 @@ export async function saveSubmission(groups: Record<string, any[]> = {}) {
         cleanups.push(() => unlink(destination));
         url = `/api/uploads/sponsor-files/${filename}`;
       }
+      return { file, url };
+    }));
+    const failure = results.find(result => result.status === 'rejected');
+    if (failure?.status === 'rejected') throw failure.reason;
+    for (const result of results) {
+      if (result.status !== 'fulfilled') continue;
+      const { file, url } = result.value;
       if (file.fieldname === 'bukti_pembayaran') proof = url;
       else materials.push({ kind: file.fieldname as MaterialKind, name: file.originalname, url, mime: file.mimetype });
     }

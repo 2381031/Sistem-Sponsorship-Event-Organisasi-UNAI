@@ -28,12 +28,20 @@ export class AllExceptionsFilter implements ExceptionFilter {
 const expressApp = express();
 
 let cachedApp: express.Express | null = null;
+let initializingApp: Promise<express.Express> | null = null;
 
 async function bootstrapServer(): Promise<express.Express> {
-  if (cachedApp) {
-    return cachedApp;
+  if (cachedApp) return cachedApp;
+  if (!initializingApp) {
+    initializingApp = initializeServer().catch(error => {
+      initializingApp = null;
+      throw error;
+    });
   }
+  return initializingApp;
+}
 
+async function initializeServer(): Promise<express.Express> {
   const adapter = new ExpressAdapter(expressApp);
   const app = await NestFactory.create(AppModule, adapter, { logger: ['error', 'warn', 'log'] });
   app.setGlobalPrefix('api');
