@@ -204,7 +204,7 @@ export default function SponsorDashboard({ currentUser, events, transactions, do
                     </div>
                     {event.url_proposal && !event.url_proposal.includes('fakepath') && (
                       <a href={event.url_proposal} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-700 hover:underline">
-                        <FileText className="h-3.5 w-3.5" /> Lihat Proposal Dokumentasi Event
+                        <FileText className="h-3.5 w-3.5" /> Lihat Proposal Event Organisasi
                       </a>
                     )}
                     <div className="space-y-1.5">
@@ -235,7 +235,11 @@ export default function SponsorDashboard({ currentUser, events, transactions, do
               <p className="text-[11px] text-[#1a2c4d] font-bold">Target: {formatIDR(selectedEvent.target_dana)}</p>
             </div>
             {selectedEvent.status_event === 'Ditutup' && <div className="p-4 rounded-xl bg-yellow-50 border border-yellow-100 text-yellow-800 text-sm font-bold">Event sudah ditutup.</div>}
-            <DocumentGallery docs={docs.filter(doc => doc.id_event === selectedEvent.id_event)} />
+            <div className="rounded-xl border border-gray-100 bg-white p-3 text-xs space-y-2">
+              <p className="font-bold">Proposal Event Organisasi — {selectedEvent.nama_event}</p>
+              {documentUrl(selectedEvent.url_proposal) ? <a href={documentUrl(selectedEvent.url_proposal)!} target="_blank" rel="noreferrer" className="font-bold text-blue-700 underline">Buka PDF Proposal Event</a> : <p className="text-gray-500">Proposal event belum tersedia.</p>}
+            </div>
+            {docs.some(doc => doc.id_event === selectedEvent.id_event) && <DocumentGallery docs={docs.filter(doc => doc.id_event === selectedEvent.id_event)} />}
             <div className="space-y-4">
               {selectedEvent.paket_tersedia?.map(pkg => {
                 const isSelected = selectedPackage?.id_paket === pkg.id_paket;
@@ -372,10 +376,10 @@ export default function SponsorDashboard({ currentUser, events, transactions, do
                     ) : <button type="button" disabled={editLoading} onClick={() => { setEditingId(tx.id_transaksi); setEditMaterials({}); setEditPackageId(String(tx.id_paket)); setEditAmount(String(tx.jumlah)); setEditProof(null); setEditError(''); setEditSuccess(''); }} className="text-xs font-bold text-blue-700 hover:underline">Edit Sponsorship</button>
                   )}
                   <div className="space-y-2 pt-2 border-t border-gray-50">
-                    <p className="text-xs text-gray-500 font-bold">Proposal Dokumentasi Event</p>
-                    {proposalUrl ? <a href={proposalUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-xs font-bold text-blue-700 hover:underline"><FileText className="h-4 w-4" /> Lihat Proposal Dokumentasi Event</a> : <p className="text-xs text-gray-400">Proposal dokumentasi event belum tersedia.</p>}
+                    <p className="text-xs text-gray-500 font-bold">Proposal Event Organisasi</p>
+                    {proposalUrl ? <a href={proposalUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-xs font-bold text-blue-700 hover:underline"><FileText className="h-4 w-4" /> Lihat Proposal Event Organisasi</a> : <p className="text-xs text-gray-400">Proposal dokumentasi event belum tersedia.</p>}
                   </div>
-                  <DocumentGallery docs={eventDocs} />
+                  {eventDocs.length > 0 && <DocumentGallery docs={eventDocs} />}
                   <MaterialFiles files={tx.sponsor_files} />
                 </div>
               ); })}

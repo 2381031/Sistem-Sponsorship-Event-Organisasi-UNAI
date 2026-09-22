@@ -43,12 +43,13 @@ export function MaterialInputs({ paket, value, onChange, existing = [] }: {
 
 export function MaterialFiles({ files = [] }: { files?: SponsorFile[] }) {
   return <div className="space-y-2 rounded-xl border border-gray-100 p-3 text-xs">
-    <p className="font-bold">Berkas Pendukung Sponsorship</p>
+    <p className="font-bold">Logo dan Lampiran Sponsor</p>
     {!files.length && <p className="text-gray-500">Belum ada berkas pendukung sponsorship yang diunggah.</p>}
     {files.map((file, index) => {
       const url = documentUrl(file.url);
       return <div key={`${file.url}-${index}`}>
         <span className="font-bold">{labels[file.kind]}: </span>
+        {url && ['image/png', 'image/jpeg'].includes(file.mime) && <a href={url} target="_blank" rel="noreferrer" className="block my-2"><img src={url} alt={`${labels[file.kind]}: ${file.name}`} loading="lazy" decoding="async" className="max-h-40 max-w-full rounded-lg object-contain" /></a>}
         {url ? <a href={url} target="_blank" rel="noreferrer" className="break-all text-blue-700 underline">{file.name}</a> : <span>Berkas tidak tersedia</span>}
       </div>;
     })}

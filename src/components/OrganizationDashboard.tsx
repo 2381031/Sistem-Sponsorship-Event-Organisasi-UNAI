@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { User, Event, SponsorshipTransaction, EventDoc } from '../types';
 import { api } from '../api';
 import DocumentGallery from './DocumentGallery';
+import { MaterialFiles } from './SponsorMaterials';
 import {
   Building2, Calendar, Target, DollarSign, UploadCloud, Users, CheckCircle2,
   Clock, AlertCircle, FileText, ChevronRight, Edit3, Trash2, Eye, Image as ImageIcon,
@@ -92,11 +93,11 @@ export default function OrganizationDashboard({
     setCreateError('');
     setCreateSuccess('');
     if (!proposalFile && !editingEvent?.url_proposal) {
-      setCreateError('Upload Proposal Dokumentasi Event PDF sebelum menerbitkan event.');
+      setCreateError('Upload Proposal Event Organisasi PDF sebelum menerbitkan event.');
       return;
     }
     if (proposalFile && (!proposalFile.name.toLowerCase().endsWith('.pdf') || (proposalFile.type && proposalFile.type !== 'application/pdf') || proposalFile.size > 10 * 1024 * 1024)) {
-      setCreateError('Proposal Dokumentasi Event harus berupa file PDF maksimal 10 MB.');
+      setCreateError('Proposal Event Organisasi harus berupa file PDF maksimal 10 MB.');
       return;
     }
     setCreateLoading(true);
@@ -281,6 +282,18 @@ export default function OrganizationDashboard({
                       <div><p className="text-[9px] text-gray-400 font-bold">Target Dana</p><h5 className="text-xs font-bold text-slate-700">{formatIDR(event.target_dana)}</h5></div>
                     </div>
 
+                    <details className="rounded-xl border border-gray-100 p-3 text-xs">
+                      <summary className="cursor-pointer font-bold text-blue-800">Logo dan Lampiran Sponsor</summary>
+                      <div className="mt-3 space-y-3">
+                        {transactions.filter(tx => tx.id_event === event.id_event).map(tx => (
+                          <div key={tx.id_transaksi} className="space-y-2">
+                            <p className="font-bold">{tx.nama_sponsor || `Sponsor #${tx.id_sponsor}`} — {tx.nama_paket} — {tx.status_pembayaran}</p>
+                            <MaterialFiles files={tx.sponsor_files} />
+                          </div>
+                        ))}
+                        {!transactions.some(tx => tx.id_event === event.id_event) && <p className="text-gray-500">Belum ada pengiriman dari sponsor untuk event ini.</p>}
+                      </div>
+                    </details>
                     <DocumentGallery docs={docs.filter(doc => doc.id_event === event.id_event)} />
 
                     <div className="grid grid-cols-2 gap-3 pt-2">
@@ -320,9 +333,9 @@ export default function OrganizationDashboard({
                 <textarea rows={4} required value={deskripsiEvent} onChange={(e) => setDeskripsiEvent(e.target.value)} className="w-full px-4 py-3 text-xs bg-[#f8fafc] border border-gray-100 rounded-xl focus:outline-none resize-none" /></div>
               <div className="space-y-1"><label className="text-xs font-bold text-gray-700">Target Dana (Rp) <span className="text-red-500">*</span></label>
                 <input type="number" required value={targetDana} onChange={(e) => setTargetDana(parseInt(e.target.value) || 0)} className="w-full px-4 py-3 text-xs bg-[#f8fafc] border border-gray-100 rounded-xl focus:outline-none" /></div>
-                <div className="space-y-1.5"><label htmlFor="event-proposal" className="text-xs font-bold text-gray-700">Upload Proposal Dokumentasi Event (.pdf) <span className="text-red-500">*</span></label>
+                <div className="space-y-1.5"><label htmlFor="event-proposal" className="text-xs font-bold text-gray-700">Upload Proposal Event Organisasi (.pdf) <span className="text-red-500">*</span></label>
                   <p className="text-xs text-gray-500">Wajib sebelum event diterbitkan. File PDF maksimal 10 MB.</p>
-                  {editingEvent?.url_proposal && <a href={editingEvent.url_proposal} target="_blank" rel="noreferrer" className="text-xs text-blue-700 underline">Lihat proposal dokumentasi event tersimpan (pilih file untuk mengganti)</a>}
+                  {editingEvent?.url_proposal && <a href={editingEvent.url_proposal} target="_blank" rel="noreferrer" className="text-xs text-blue-700 underline">Lihat proposal event organisasi tersimpan (pilih file untuk mengganti)</a>}
                   <div className="border border-dashed border-gray-200 hover:border-blue-900/30 bg-[#f8fafc] rounded-2xl p-6 text-center relative cursor-pointer">
                     <input id="event-proposal" key={editingEvent?.id_event ?? 'new'} type="file" required={!editingEvent?.url_proposal && !proposalFile} accept="application/pdf,.pdf" onChange={(e) => setProposalFile(e.target.files?.[0] || null)} className="absolute inset-0 opacity-0 cursor-pointer" />
                     <FileText className="h-8 w-8 text-gray-400 mx-auto mb-2" />
