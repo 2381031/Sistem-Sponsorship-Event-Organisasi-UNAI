@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { User, Event, SponsorshipTransaction } from '../types';
 import { api } from '../api';
 import { documentUrl } from './DocumentGallery';
@@ -25,12 +25,14 @@ export default function AdminDashboard({
   const [actionMessage, setActionMessage] = useState('');
   const [actionError, setActionError] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
+  const actionPending = useRef(false);
   const runAction = async (action: () => Promise<void>, message: string) => {
-    if (actionLoading) return;
+    if (actionPending.current) return;
+    actionPending.current = true;
     setActionLoading(true); setActionMessage(''); setActionError('');
     try { await action(); setActionMessage(message); }
     catch (error: any) { setActionError(error.message || 'Tindakan gagal. Coba kembali.'); }
-    finally { setActionLoading(false); }
+    finally { actionPending.current = false; setActionLoading(false); }
   };
 
   const formatIDR = (num: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(num);
@@ -205,6 +207,8 @@ export default function AdminDashboard({
                           <img
                             src={tx.bukti_pembayaran}
                             alt={`Bukti pembayaran #${tx.id_transaksi}`}
+                            loading="lazy"
+                            decoding="async"
                             onClick={() => window.open(tx.bukti_pembayaran!, '_blank')}
                             className="max-h-64 w-auto rounded-lg cursor-zoom-in border border-gray-200"
                           />

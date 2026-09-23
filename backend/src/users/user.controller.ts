@@ -20,6 +20,14 @@ export class UserController {
     return this.userService.findAll();
   }
 
+  @Get('organizations')
+  async findOrganizations(@Request() req: any) {
+    if (!['Sponsor', 'Admin'].includes(req.user.peran)) {
+      throw new ForbiddenException('Hanya Sponsor dan Admin yang dapat mengakses daftar organisasi');
+    }
+    return this.userService.findOrganizations(req.user);
+  }
+
   @Get(':id')
   async findOne(@Param('id', ParseIntPipe) id: number, @Request() req: any) {
     const user = await this.userService.findByIdWithProfile(id);

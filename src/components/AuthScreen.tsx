@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { User } from '../types';
 import { api } from '../api';
 import { ArrowLeft, Building2, Users, CheckCircle2, ShieldAlert } from 'lucide-react';
@@ -15,6 +15,7 @@ export default function AuthScreen({ onLoginSuccess, onRegisterUser }: AuthScree
   const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState('');
   const [loginLoading, setLoginLoading] = useState(false);
+  const loginPending = useRef(false);
 
   const [orgNama, setOrgNama] = useState('');
   const [orgEmail, setOrgEmail] = useState('');
@@ -36,9 +37,12 @@ export default function AuthScreen({ onLoginSuccess, onRegisterUser }: AuthScree
   const [registerError, setRegisterError] = useState('');
   const [registerSuccess, setRegisterSuccess] = useState('');
   const [registerLoading, setRegisterLoading] = useState(false);
+  const registerPending = useRef(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loginPending.current) return;
+    loginPending.current = true;
     setLoginError('');
     setLoginLoading(true);
 
@@ -48,13 +52,17 @@ export default function AuthScreen({ onLoginSuccess, onRegisterUser }: AuthScree
     } catch (err: any) {
       setLoginError(err.message || 'Login gagal');
     } finally {
+      loginPending.current = false;
       setLoginLoading(false);
     }
   };
 
   const handleRegisterOrg = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (registerPending.current) return;
+    registerPending.current = true;
     setRegisterError('');
+    setRegisterSuccess('');
     setRegisterLoading(true);
 
     try {
@@ -73,21 +81,25 @@ export default function AuthScreen({ onLoginSuccess, onRegisterUser }: AuthScree
         },
       });
       setRegisterSuccess('Pendaftaran berhasil! Akun Anda sedang menunggu verifikasi admin.');
-      setTimeout(() => {
-        setRegisterSuccess('');
-        setCurrentStep('login');
-        setOrgNama(''); setOrgEmail(''); setOrgPassword(''); setOrgNoTelp(''); setOrgDeskripsi(''); setOrgRekNo(''); setOrgRekNama(''); setOrgNamaBank('');
-      }, 3000);
+      setLoginEmail(orgEmail);
+      setLoginPassword('');
+      setLoginError('');
+      setCurrentStep('login');
+      setOrgNama(''); setOrgEmail(''); setOrgPassword(''); setOrgNoTelp(''); setOrgDeskripsi(''); setOrgRekNo(''); setOrgRekNama(''); setOrgNamaBank('');
     } catch (err: any) {
       setRegisterError(err.message || 'Pendaftaran gagal');
     } finally {
+      registerPending.current = false;
       setRegisterLoading(false);
     }
   };
 
   const handleRegisterSponsor = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (registerPending.current) return;
+    registerPending.current = true;
     setRegisterError('');
+    setRegisterSuccess('');
     setRegisterLoading(true);
 
     try {
@@ -104,14 +116,15 @@ export default function AuthScreen({ onLoginSuccess, onRegisterUser }: AuthScree
         },
       });
       setRegisterSuccess('Pendaftaran berhasil! Akun Anda sedang menunggu verifikasi admin.');
-      setTimeout(() => {
-        setRegisterSuccess('');
-        setCurrentStep('login');
-        setSponNama(''); setSponEmail(''); setSponPassword(''); setSponNoTelp(''); setSponAlamat(''); setSponWebsite(''); setSponDeskripsi('');
-      }, 3000);
+      setLoginEmail(sponEmail);
+      setLoginPassword('');
+      setLoginError('');
+      setCurrentStep('login');
+      setSponNama(''); setSponEmail(''); setSponPassword(''); setSponNoTelp(''); setSponAlamat(''); setSponWebsite(''); setSponDeskripsi('');
     } catch (err: any) {
       setRegisterError(err.message || 'Pendaftaran gagal');
     } finally {
+      registerPending.current = false;
       setRegisterLoading(false);
     }
   };
@@ -167,6 +180,7 @@ export default function AuthScreen({ onLoginSuccess, onRegisterUser }: AuthScree
               <ShieldAlert className="h-4 w-4 shrink-0" /><span>{loginError}</span>
             </div>
           )}
+          {registerSuccess && <div role="status" className="w-full p-3 mb-4 bg-emerald-50 border border-emerald-100 text-emerald-600 text-xs rounded-xl font-medium flex items-center gap-2"><CheckCircle2 className="h-4 w-4 shrink-0" /><span>{registerSuccess}</span></div>}
           <form onSubmit={handleLogin} className="w-full space-y-4">
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-gray-700 block">Email</label>
@@ -187,7 +201,7 @@ export default function AuthScreen({ onLoginSuccess, onRegisterUser }: AuthScree
               <span className="text-[10px] text-gray-300 mx-3 uppercase font-bold tracking-wider">atau</span>
               <div className="border-t border-gray-100 flex-1"></div>
             </div>
-            <button type="button" onClick={() => { setCurrentStep('select-role'); setLoginError(''); }}
+            <button type="button" onClick={() => { setCurrentStep('select-role'); setLoginError(''); setRegisterSuccess(''); }}
               className="w-full py-3 bg-[#f8fafc] hover:bg-gray-100 text-[#1a2c4d] font-bold text-xs rounded-xl border border-gray-100 transition-all shadow-[0_1px_3px_rgba(0,0,0,0.02)] active:scale-[0.99]">
               Daftar Akun Baru
             </button>

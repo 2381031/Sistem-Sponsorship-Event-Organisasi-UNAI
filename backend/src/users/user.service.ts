@@ -1,8 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, ConflictException } from '@nestjs/common';
 import bcrypt from 'bcryptjs';
 import pool from '../database';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { EVENT_VISIBILITY_SQL } from '../events/event-visibility';
 
 const SALT_ROUNDS = 10;
 
@@ -87,21 +88,37 @@ export class UserService {
   }
 
   async findByIdWithProfile(id: number) {
-    const user = await this.findById(id);
-    let profil: any = null;
-    if (user.peran === 'Organisasi') {
-      const r = await pool.query('SELECT * FROM organisasi WHERE id_pengguna = $1', [user.id_pengguna]);
-      if (r.rows[0]) profil = r.rows[0];
-    } else if (user.peran === 'Sponsor') {
-      const r = await pool.query('SELECT * FROM sponsor WHERE id_pengguna = $1', [user.id_pengguna]);
-      if (r.rows[0]) profil = r.rows[0];
-    }
-    return { id: user.id_pengguna, email: user.email, peran: user.peran, status_akun: user.status_akun, profil };
+    const result = await pool.query(
+      `SELECT u.id_pengguna AS id, u.email, u.peran, u.status_akun,
+              CASE WHEN u.peran = 'Organisasi' THEN to_jsonb(o)
+                   WHEN u.peran = 'Sponsor' THEN to_jsonb(s)
+                   ELSE NULL END AS profil
+       FROM users u
+       LEFT JOIN organisasi o ON u.id_pengguna = o.id_pengguna
+       LEFT JOIN sponsor s ON u.id_pengguna = s.id_pengguna
+       WHERE u.id_pengguna = $1`, [id],
+    );
+    if (!result.rows.length) throw new NotFoundException('User not found');
+    return result.rows[0];
+  }
+
+  async findOrganizations(user: { peran: string; id_pengguna: number }) {
+    const result = await pool.query(
+      `SELECT u.id_pengguna AS id, u.peran, to_jsonb(o) AS profil
+       FROM users u
+       JOIN organisasi o ON u.id_pengguna = o.id_pengguna
+       WHERE u.peran = 'Organisasi' AND EXISTS (
+         SELECT 1 FROM event e
+         WHERE e.id_organisasi = u.id_pengguna AND ${EVENT_VISIBILITY_SQL}
+       )
+       ORDER BY u.id_pengguna`, [user.peran, user.id_pengguna],
+    );
+    return result.rows;
   }
 
   async updateStatus(id: number, status: string, adminId?: number) {
-    await this.findById(id);
-    await pool.query('UPDATE users SET status_akun = $1 WHERE id_pengguna = $2', [status, id]);
+    const result = await pool.query('UPDATE users SET status_akun = $1 WHERE id_pengguna = $2 RETURNING id_pengguna', [status, id]);
+    if (!result.rows.length) throw new NotFoundException('User not found');
     return this.findByIdWithProfile(id);
   }
 
@@ -149,7 +166,17 @@ export class UserService {
   }
 
   async delete(id: number) {
-    await this.findById(id);
-    await pool.query('DELETE FROM users WHERE id_pengguna = $1', [id]);
+    const user = await this.findById(id);
+    if (!['Organisasi', 'Sponsor'].includes(user.peran)) {
+      throw new ForbiddenException('Hanya akun Organisasi dan Sponsor yang dapat dihapus');
+    }
+    try {
+      await pool.query('DELETE FROM users WHERE id_pengguna = $1', [id]);
+    } catch (error) {
+      if ((error as { code?: string }).code === '23503') {
+        throw new ConflictException('Akun masih terkait transaksi atau data lain sehingga belum dapat dihapus. Riwayat pembayaran tetap dipertahankan.');
+      }
+      throw error;
+    }
   }
 }

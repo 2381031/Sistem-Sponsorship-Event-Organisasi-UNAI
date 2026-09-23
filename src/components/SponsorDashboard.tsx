@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { User, Event, SponsorshipTransaction, EventDoc } from '../types';
 import { api } from '../api';
 import DocumentGallery, { documentUrl } from './DocumentGallery';
@@ -32,6 +32,7 @@ export default function SponsorDashboard({ currentUser, events, transactions, do
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [submitLoading, setSubmitLoading] = useState(false);
+  const submitPending = useRef(false);
   const [customAmount, setCustomAmount] = useState('');
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editPackageId, setEditPackageId] = useState('');
@@ -40,12 +41,23 @@ export default function SponsorDashboard({ currentUser, events, transactions, do
   const [editError, setEditError] = useState('');
   const [editSuccess, setEditSuccess] = useState('');
   const [editLoading, setEditLoading] = useState(false);
+  const editPending = useRef(false);
   const [materials, setMaterials] = useState<MaterialSelection>({});
   const [editMaterials, setEditMaterials] = useState<MaterialSelection>({});
 
+  useEffect(() => {
+    if (!buktiFile) {
+      setBuktiPreview('');
+      return;
+    }
+    const previewUrl = URL.createObjectURL(buktiFile);
+    setBuktiPreview(previewUrl);
+    return () => URL.revokeObjectURL(previewUrl);
+  }, [buktiFile]);
+
   const handleEdit = async (e: React.FormEvent, tx: SponsorshipTransaction, event: Event) => {
     e.preventDefault();
-    if (editLoading) return;
+    if (editPending.current) return;
     setEditError('');
     const paket = event.paket_tersedia.find(p => p.id_paket === Number(editPackageId));
     if (!paket) { setEditError('Pilih paket sponsorship.'); return; }
@@ -62,6 +74,7 @@ export default function SponsorDashboard({ currentUser, events, transactions, do
     data.append('jumlah', String(amount));
     if (editProof) data.append('bukti_pembayaran', editProof);
     attachMaterials(data, editMaterials);
+    editPending.current = true;
     setEditLoading(true);
     try {
       await onUpdateTransaction(tx.id_transaksi, data);
@@ -69,7 +82,7 @@ export default function SponsorDashboard({ currentUser, events, transactions, do
       setEditProof(null);
       setEditSuccess('Sponsorship diperbarui dan masih menunggu persetujuan Admin.');
     } catch (err: any) { setEditError(err.message || 'Gagal memperbarui sponsorship.'); }
-    finally { setEditLoading(false); }
+    finally { editPending.current = false; setEditLoading(false); }
   };
 
   const [profileNama, setProfileNama] = useState(profil?.nama_perusahaan || '');
@@ -80,6 +93,7 @@ export default function SponsorDashboard({ currentUser, events, transactions, do
   const [profileDeskripsi, setProfileDeskripsi] = useState('');
   const [profileSuccess, setProfileSuccess] = useState('');
   const [profileLoading, setProfileLoading] = useState(false);
+  const profilePending = useRef(false);
   useEffect(() => {
     setProfileNama(profil?.nama_perusahaan || '');
     setProfileNoTelp(profil?.no_telp || '');
@@ -106,7 +120,10 @@ export default function SponsorDashboard({ currentUser, events, transactions, do
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (profilePending.current) return;
+    profilePending.current = true;
     setProfileLoading(true);
+    setProfileSuccess('');
     try {
       await api.updateUser(currentUser.id, {
         sponsorDetails: { nama_perusahaan: profileNama, alamat: profileAlamat, no_telp: profileNoTelp, website: profileWebsite.trim() },
@@ -114,28 +131,28 @@ export default function SponsorDashboard({ currentUser, events, transactions, do
       setProfileSuccess('Profil berhasil diperbarui!');
       setTimeout(() => setProfileSuccess(''), 3000);
     } catch (err: any) { setProfileSuccess('Gagal: ' + err.message); }
-    finally { setProfileLoading(false); }
+    finally { profilePending.current = false; setProfileLoading(false); }
   };
 
   const handleBuktiChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0] ?? null;
-    setBuktiPreview((prev) => { if (prev) URL.revokeObjectURL(prev); return f ? URL.createObjectURL(f) : ''; });
-    setBuktiFile(f);
+    setBuktiFile(e.target.files?.[0] ?? null);
   };
 
   const resetBukti = () => {
-    setBuktiPreview((prev) => { if (prev) URL.revokeObjectURL(prev); return ''; });
     setBuktiFile(null);
   };
 
   const handleUploadPayment = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitPending.current) return;
     setErrorMsg('');
+    setSuccessMsg('');
     if (!buktiFile) { setErrorMsg('Pilih file bukti transfer.'); return; }
     if (!selectedEvent || !selectedPackage) return;
     const materialError = validateSelection(selectedPackage, materials, buktiFile);
     if (materialError) { setErrorMsg(materialError); return; }
     if (Number(selectedPackage.persentase_dana) === 0 && (!customAmount || Number(customAmount) <= 0)) { setErrorMsg('Masukkan jumlah donasi.'); return; }
+    submitPending.current = true;
     setSubmitLoading(true);
 
     try {
@@ -156,9 +173,14 @@ export default function SponsorDashboard({ currentUser, events, transactions, do
       await onAddTransaction(fd);
       setMaterials({});
       setSuccessMsg('Bukti transfer berhasil dikirim! Menunggu verifikasi admin.');
-      setTimeout(() => { setSuccessMsg(''); setCurrentStep('list'); setActiveTab('riwayat'); resetBukti(); setCustomAmount(''); setSelectedPackage(null); setSelectedEvent(null); }, 2500);
+      setCurrentStep('list');
+      setActiveTab('riwayat');
+      resetBukti();
+      setCustomAmount('');
+      setSelectedPackage(null);
+      setSelectedEvent(null);
     } catch (err: any) { setErrorMsg(err.message); }
-    finally { setSubmitLoading(false); }
+    finally { submitPending.current = false; setSubmitLoading(false); }
   };
 
   return (
@@ -215,7 +237,7 @@ export default function SponsorDashboard({ currentUser, events, transactions, do
                         <span className="text-red-500 font-bold">Sisa: {formatIDR(Math.max(0, event.target_dana - eventCollected))}</span>
                       </div>
                     </div>
-                    <button onClick={() => { setMaterials({}); setSelectedEvent(event); setSelectedPackage(event.paket_tersedia?.[0] || null); setCurrentStep('pilih-paket'); }}
+                    <button onClick={() => { setSuccessMsg(''); setErrorMsg(''); setMaterials({}); setSelectedEvent(event); setSelectedPackage(event.paket_tersedia?.[0] || null); setCurrentStep('pilih-paket'); }}
                       className="text-xs font-extrabold text-[#1a2c4d] hover:underline">Lihat Detail &gt;</button>
                   </div>
                 );
@@ -274,7 +296,6 @@ export default function SponsorDashboard({ currentUser, events, transactions, do
             </button>
             <div className="text-center"><h2 className="text-xl font-bold text-[#1a2c4d]">Upload Bukti Pembayaran</h2></div>
             {errorMsg && <div className="p-3 bg-red-50 border border-red-100 text-red-600 text-xs rounded-xl font-medium">{errorMsg}</div>}
-            {successMsg && <div className="p-3 bg-emerald-50 border border-emerald-100 text-emerald-600 text-xs rounded-xl font-medium">{successMsg}</div>}
             <div className="bg-[#f8fafc] rounded-2xl p-4 border border-gray-100 flex justify-between items-center text-xs">
               <span className="text-gray-400 font-bold">Paket dipilih</span>
               <span className="font-extrabold text-[#1a2c4d] uppercase font-mono">{selectedPackage.nama_paket}</span>
@@ -298,7 +319,7 @@ export default function SponsorDashboard({ currentUser, events, transactions, do
                 </div>
                 {buktiPreview && (
                   <div className="rounded-xl overflow-hidden border border-gray-100 bg-white">
-                    <img src={buktiPreview} alt="Preview bukti transfer" className="max-h-56 w-full object-contain bg-white" />
+                    <img src={buktiPreview} alt="Preview bukti transfer" decoding="async" className="max-h-56 w-full object-contain bg-white" />
                   </div>
                 )}
               </div>
@@ -329,6 +350,7 @@ export default function SponsorDashboard({ currentUser, events, transactions, do
         {activeTab === 'riwayat' && (
           <div className="space-y-6">
             <div className="text-center mb-6"><h2 className="text-xl font-bold text-[#1a2c4d]">Riwayat Sponsorship Saya</h2></div>
+            {successMsg && <div role="status" className="p-3 bg-emerald-50 border border-emerald-100 text-emerald-600 text-xs rounded-xl font-medium">{successMsg}</div>}
             {editSuccess && <p role="status" className="rounded-xl bg-green-50 p-3 text-xs text-green-700">{editSuccess}</p>}
             <p className="text-xs text-gray-400 font-bold">Total: {myTransactions.length} sponsorship</p>
             <div className="space-y-4">

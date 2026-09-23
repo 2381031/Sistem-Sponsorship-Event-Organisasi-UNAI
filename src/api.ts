@@ -1,20 +1,40 @@
 const API_BASE = '/api';
+const pendingReads = new Map<string, Promise<unknown>>();
+let dataRevision = 0;
 
 function getToken(): string | null {
   return localStorage.getItem('unai_token');
 }
 
 function setToken(token: string) {
+  pendingReads.clear();
   localStorage.setItem('unai_token', token);
 }
 
 function clearToken() {
+  pendingReads.clear();
   localStorage.removeItem('unai_token');
 }
 
-async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getToken();
+  const isRead = !options.method || options.method === 'GET';
+  // Share concurrent reads only; never cache results or retry a submission.
+  if (!isRead) { dataRevision++; pendingReads.clear(); }
+  const key = `${token}:${dataRevision}:${path}`;
+  const existing = isRead && pendingReads.get(key);
+  if (existing) return existing as Promise<T>;
+  const operation = sendRequest<T>(path, options, token).finally(() => {
+    if (pendingReads.get(key) === operation) pendingReads.delete(key);
+    if (!isRead) { dataRevision++; pendingReads.clear(); }
+  });
+  if (isRead) pendingReads.set(key, operation);
+  return operation;
+}
+
+async function sendRequest<T>(path: string, options: RequestInit, token: string | null): Promise<T> {
   const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
+  const isRead = !options.method || options.method === 'GET';
   const headers: Record<string, string> = {
     ...(!isFormData ? { 'Content-Type': 'application/json' } : {}),
     ...((options.headers as Record<string, string>) || {}),
@@ -23,9 +43,13 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     headers['Authorization'] = `Bearer ${token}`;
   }
 
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), isRead ? 20000 : 90000);
+  try {
   const res = await fetch(`${API_BASE}${path}`, {
     ...options,
     headers,
+    signal: controller.signal,
   });
 
   const json = await res.json().catch(() => null);
@@ -33,12 +57,21 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     if (res.status === 401) {
       throw new Error('Sesi login sudah tidak valid. Silakan keluar dan masuk kembali.');
     }
-    throw new Error(json?.message || `HTTP ${res.status}`);
+    if (res.status === 413) throw new Error('Ukuran unggahan terlalu besar. Pilih berkas yang lebih kecil.');
+    throw new Error(Array.isArray(json?.message) ? json.message.join('. ') : json?.message || `HTTP ${res.status}`);
   }
   if (json === null) {
     throw new Error('Respons server tidak valid. Periksa apakah layanan API berjalan.');
   }
   return json as T;
+  } catch (error) {
+    if (controller.signal.aborted) {
+      throw new Error(isRead
+        ? 'Server belum merespons. Silakan coba muat data kembali.'
+        : 'Waktu tunggu habis. Periksa daftar atau riwayat terlebih dahulu karena pengiriman mungkin sudah tersimpan sebelum mencoba lagi.');
+    }
+    throw error;
+  } finally { clearTimeout(timeout); }
 }
 
 export const api = {
@@ -72,6 +105,10 @@ export const api = {
   // ---- USERS ----
   async getUsers() {
     return request<any[]>('/users');
+  },
+
+  async getOrganizations() {
+    return request<any[]>('/users/organizations');
   },
 
   async getUser(id: number) {

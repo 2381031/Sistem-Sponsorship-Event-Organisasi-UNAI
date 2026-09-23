@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { User, Event, SponsorshipTransaction, EventDoc } from '../types';
 import { api } from '../api';
 import DocumentGallery from './DocumentGallery';
@@ -35,6 +35,7 @@ export default function OrganizationDashboard({
   const [profileNamaBank, setProfileNamaBank] = useState(profil?.nama_bank || '');
   const [profileSuccess, setProfileSuccess] = useState('');
   const [profileLoading, setProfileLoading] = useState(false);
+  const profilePending = useRef(false);
   useEffect(() => {
     setProfileNama(profil?.nama_organisasi || '');
     setProfileDeskripsi(profil?.deskripsi || '');
@@ -52,6 +53,9 @@ export default function OrganizationDashboard({
   const [createError, setCreateError] = useState('');
   const [createSuccess, setCreateSuccess] = useState('');
   const [createLoading, setCreateLoading] = useState(false);
+  const createPending = useRef(false);
+  const statusPending = useRef(new Set<number>());
+  const [statusLoadingIds, setStatusLoadingIds] = useState<number[]>([]);
 
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
 
@@ -67,7 +71,10 @@ export default function OrganizationDashboard({
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (profilePending.current) return;
+    profilePending.current = true;
     setProfileLoading(true);
+    setProfileSuccess('');
     try {
       await api.updateUser(currentUser.id, {
         organisasiDetails: {
@@ -84,12 +91,14 @@ export default function OrganizationDashboard({
     } catch (err: any) {
       setProfileSuccess('Gagal update profil: ' + err.message);
     } finally {
+      profilePending.current = false;
       setProfileLoading(false);
     }
   };
 
   const handleCreateEvent = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (createPending.current) return;
     setCreateError('');
     setCreateSuccess('');
     if (!proposalFile && !editingEvent?.url_proposal) {
@@ -100,6 +109,7 @@ export default function OrganizationDashboard({
       setCreateError('Proposal Event Organisasi harus berupa file PDF maksimal 10 MB.');
       return;
     }
+    createPending.current = true;
     setCreateLoading(true);
 
     try {
@@ -153,25 +163,29 @@ export default function OrganizationDashboard({
         setCreateSuccess('Event berhasil diterbitkan!');
       }
 
-      setTimeout(() => {
-        setCreateSuccess('');
-        setActiveTab('manajemen');
-        setEditingEvent(null);
-        setNamaEvent(''); setTanggalEvent(''); setDeskripsiEvent(''); setProposalFile(null);
-      }, 2000);
+      setActiveTab('manajemen');
+      setEditingEvent(null);
+      setNamaEvent(''); setTanggalEvent(''); setDeskripsiEvent(''); setProposalFile(null);
     } catch (err: any) {
       setCreateError(err.message || 'Gagal menyimpan event');
     } finally {
+      createPending.current = false;
       setCreateLoading(false);
     }
   };
 
   const handleToggleEventStatus = async (event: Event) => {
+    if (statusPending.current.has(event.id_event)) return;
+    statusPending.current.add(event.id_event);
+    setStatusLoadingIds([...statusPending.current]);
     const newStatus = event.status_event === 'Dipublikasikan' ? 'Ditutup' : 'Dipublikasikan';
     try {
       await onUpdateEventStatus(event.id_event, newStatus);
     } catch (err: any) {
       window.alert(err.message || 'Gagal mengubah status event');
+    } finally {
+      statusPending.current.delete(event.id_event);
+      setStatusLoadingIds([...statusPending.current]);
     }
   };
 
@@ -261,7 +275,8 @@ export default function OrganizationDashboard({
             <div className="text-center mb-6">
               <h2 className="text-xl font-bold text-[#1a2c4d] tracking-tight">Manajemen Event</h2>
             </div>
-            <button onClick={() => { setActiveTab('buat-event'); setProposalFile(null); setCreateError(''); setEditingEvent(null); setNamaEvent(''); setTanggalEvent(''); setDeskripsiEvent(''); setTargetDana(50000000); }}
+            {createSuccess && <div role="status" className="p-3 bg-emerald-50 border border-emerald-100 text-emerald-600 text-xs rounded-xl font-medium flex items-center gap-2"><CheckCircle2 className="h-4 w-4" />{createSuccess}</div>}
+            <button onClick={() => { setActiveTab('buat-event'); setProposalFile(null); setCreateError(''); setCreateSuccess(''); setEditingEvent(null); setNamaEvent(''); setTanggalEvent(''); setDeskripsiEvent(''); setTargetDana(50000000); }}
               className="w-full py-3 bg-[#1a2c4d] hover:bg-[#15233e] text-white font-bold text-xs rounded-xl transition-all shadow-md">
               + Buat Event Baru
             </button>
@@ -297,14 +312,14 @@ export default function OrganizationDashboard({
                     <DocumentGallery docs={docs.filter(doc => doc.id_event === event.id_event)} />
 
                     <div className="grid grid-cols-2 gap-3 pt-2">
-                      <button onClick={() => { setEditingEvent(event); setProposalFile(null); setCreateError(''); setNamaEvent(event.nama_event); setTanggalEvent(event.tanggal_event); setDeskripsiEvent(event.deskripsi || ''); setTargetDana(event.target_dana); setActiveTab('buat-event'); }}
+                      <button onClick={() => { setEditingEvent(event); setProposalFile(null); setCreateError(''); setCreateSuccess(''); setNamaEvent(event.nama_event); setTanggalEvent(event.tanggal_event); setDeskripsiEvent(event.deskripsi || ''); setTargetDana(event.target_dana); setActiveTab('buat-event'); }}
                         className="py-2.5 bg-[#f8fafc] hover:bg-gray-100 text-[#1a2c4d] font-bold text-[11px] rounded-xl border border-gray-100 flex items-center justify-center gap-1.5">
                         <Edit3 className="h-3.5 w-3.5" /> Edit
                       </button>
                       <button onClick={() => handleToggleEventStatus(event)}
-                        disabled={event.status_event !== 'Dipublikasikan' && Number(event.target_dana) > 0 && eventCollected >= Number(event.target_dana)}
+                        disabled={statusLoadingIds.includes(event.id_event) || (event.status_event !== 'Dipublikasikan' && Number(event.target_dana) > 0 && eventCollected >= Number(event.target_dana))}
                         className={`py-2.5 font-bold text-[11px] rounded-xl border flex items-center justify-center gap-1.5 ${event.status_event === 'Dipublikasikan' ? 'bg-[#fff5f5] text-[#e53e3e] border-[#fed7d7]' : 'bg-emerald-50 text-emerald-600 border-emerald-100'}`}>
-                        <CheckCircle className="h-3.5 w-3.5" /> {event.status_event === 'Dipublikasikan' ? 'Tutup Event' : Number(event.target_dana) > 0 && eventCollected >= Number(event.target_dana) ? 'Dana Terpenuhi' : 'Buka Event'}
+                        <CheckCircle className="h-3.5 w-3.5" /> {statusLoadingIds.includes(event.id_event) ? 'Menyimpan...' : event.status_event === 'Dipublikasikan' ? 'Tutup Event' : Number(event.target_dana) > 0 && eventCollected >= Number(event.target_dana) ? 'Dana Terpenuhi' : 'Buka Event'}
                       </button>
                     </div>
                   </div>
@@ -323,7 +338,6 @@ export default function OrganizationDashboard({
               <h2 className="text-xl font-bold text-[#1a2c4d] tracking-tight">{editingEvent ? 'Edit Detail Event' : 'Buat Event Baru'}</h2>
             </div>
             {createError && <div className="p-3 bg-red-50 border border-red-100 text-red-600 text-xs rounded-xl font-medium">{createError}</div>}
-            {createSuccess && <div className="p-3 bg-emerald-50 border border-emerald-100 text-emerald-600 text-xs rounded-xl font-medium flex items-center gap-2"><CheckCircle2 className="h-4 w-4" />{createSuccess}</div>}
             <form onSubmit={handleCreateEvent} className="space-y-4">
               <div className="space-y-1"><label className="text-xs font-bold text-gray-700">Nama Event <span className="text-red-500">*</span></label>
                 <input type="text" required value={namaEvent} onChange={(e) => setNamaEvent(e.target.value)} className="w-full px-4 py-3 text-xs bg-[#f8fafc] border border-gray-100 rounded-xl focus:outline-none" /></div>

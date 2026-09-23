@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import pool from '../database';
 import { closeFundedEvents } from './funding';
+import { EVENT_VISIBILITY_SQL } from './event-visibility';
 
 @Injectable()
 export class EventService {
@@ -32,18 +33,23 @@ export class EventService {
       );
       const event = evResult.rows[0];
 
+      let packages: any[] = [];
       if (data.paket_tersedia && data.paket_tersedia.length > 0) {
-        for (const p of data.paket_tersedia) {
-          await client.query(
-            `INSERT INTO paket_sponsorship (id_event, nama_paket, persentase_dana, deskripsi_keuntungan)
-             VALUES ($1, $2, $3, $4)`,
-            [event.id_event, p.nama_paket, p.persentase_dana, p.deskripsi_keuntungan || null],
-          );
-        }
+        const packageResult = await client.query(
+          `INSERT INTO paket_sponsorship (id_event, nama_paket, persentase_dana, deskripsi_keuntungan)
+           SELECT $1, p.nama_paket, p.persentase_dana, p.deskripsi_keuntungan
+           FROM unnest($2::text[], $3::numeric[], $4::text[])
+             AS p(nama_paket, persentase_dana, deskripsi_keuntungan)
+           RETURNING *`,
+          [event.id_event, data.paket_tersedia.map(p => p.nama_paket),
+           data.paket_tersedia.map(p => p.persentase_dana),
+           data.paket_tersedia.map(p => p.deskripsi_keuntungan || null)],
+        );
+        packages = packageResult.rows;
       }
 
       await client.query('COMMIT');
-      return this.findOne(event.id_event);
+      return { ...event, paket_tersedia: packages };
     } catch (err) {
       await client.query('ROLLBACK');
       throw err;
@@ -56,9 +62,7 @@ export class EventService {
     await closeFundedEvents(pool);
     const evResult = await pool.query(`SELECT e.*,
       (SELECT COALESCE(SUM(t.jumlah), 0) FROM transaksi_sponsorship t WHERE t.id_event = e.id_event AND t.status_pembayaran = 'Diverifikasi') AS dana_terkumpul
-      FROM event e WHERE $1 = 'Admin' OR e.id_organisasi = $2
-      OR ($1 = 'Sponsor' AND (e.status_event IN ('Dipublikasikan', 'published', 'open', 'terbuka', 'Ditutup', 'closed')
-        OR EXISTS (SELECT 1 FROM transaksi_sponsorship t WHERE t.id_event = e.id_event AND t.id_sponsor = $2)))
+      FROM event e WHERE ${EVENT_VISIBILITY_SQL}
       ORDER BY e.id_event DESC`, [user.peran, user.id_pengguna]);
     if (!evResult.rows.length) return [];
     const paketResult = await pool.query('SELECT * FROM paket_sponsorship WHERE id_event = ANY($1::int[]) ORDER BY id_paket', [evResult.rows.map(event => event.id_event)]);

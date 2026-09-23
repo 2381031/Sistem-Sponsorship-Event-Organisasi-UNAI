@@ -1,15 +1,27 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 import { User, Event, SponsorshipTransaction, EventDoc } from './types';
 import { api } from './api';
 import AuthScreen from './components/AuthScreen';
-import OrganizationDashboard from './components/OrganizationDashboard';
-import SponsorDashboard from './components/SponsorDashboard';
-import AdminDashboard from './components/AdminDashboard';
+const dashboardLoaders = {
+  Organisasi: () => import('./components/OrganizationDashboard'),
+  Sponsor: () => import('./components/SponsorDashboard'),
+  Admin: () => import('./components/AdminDashboard'),
+};
+const OrganizationDashboard = lazy(dashboardLoaders.Organisasi);
+const SponsorDashboard = lazy(dashboardLoaders.Sponsor);
+const AdminDashboard = lazy(dashboardLoaders.Admin);
+
+function LoadingScreen() {
+  return <div className="min-h-screen bg-slate-50 flex items-center justify-center" role="status">
+    <div className="text-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#1a2c4d] mx-auto mb-4" />
+      <p className="text-xs text-gray-400 font-bold">Memuat data dari server...</p></div>
+  </div>;
+}
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
     const saved = localStorage.getItem('unai_current_user');
-    return saved ? JSON.parse(saved) : null;
+    try { return saved ? JSON.parse(saved) : null; } catch { return null; }
   });
 
   const [events, setEvents] = useState<Event[]>([]);
@@ -17,47 +29,70 @@ export default function App() {
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [docs, setDocs] = useState<EventDoc[]>([]);
   const [loading, setLoading] = useState(true);
-  const [dataError, setDataError] = useState<string | null>(null);
+  const [dataErrors, setDataErrors] = useState<Record<string, string>>({});
+  const revision = useRef(0);
+  const session = useRef(0);
+  const pendingWrites = useRef(0);
+  const activeLoad = useRef<{ revision: number; ready: Promise<void> } | null>(null);
+  const lastRefresh = useRef(0);
 
   const loadAllData = useCallback(async () => {
-    if (!currentUser) return;
-    setDataError(null);
-    try {
-      const [evts, txs, users, allDocs, profile] = await Promise.all([
-        api.getEvents(),
-        api.getTransactions(),
-        currentUser.peran === 'Admin' ? api.getUsers() : Promise.resolve([]),
-        api.getAllDocs(),
-        api.getUser(currentUser.id),
-      ]);
-      setEvents(evts);
-      setTransactions(txs);
-      setAllUsers(users);
-      setDocs(allDocs);
-      setCurrentUser(previous => previous?.id === profile.id && JSON.stringify(previous) !== JSON.stringify(profile) ? profile : previous);
-      if (currentUser.peran === 'Sponsor') {
-        const organizationIds = [...new Set(evts.map(event => event.id_organisasi))];
-        const organizations = await Promise.all(organizationIds.map(id => api.getUser(id)));
-        setAllUsers(organizations);
+    if (!currentUser || pendingWrites.current) return;
+    if (activeLoad.current?.revision === revision.current) return activeLoad.current.ready;
+    const startedRevision = revision.current;
+    const token = localStorage.getItem('unai_token');
+    const isCurrent = () => startedRevision === revision.current && token === localStorage.getItem('unai_token');
+    // Each dataset commits independently; a missing documentation table must not hide events.
+    const read = async <T,>(label: string, fetchData: () => Promise<T>, apply: (value: T) => void) => {
+      try {
+        const result = await fetchData();
+        if (!isCurrent()) return;
+        apply(result);
+        setDataErrors(previous => { const next = { ...previous }; delete next[label]; return next; });
+      } catch (error) {
+        if (isCurrent()) setDataErrors(previous => ({ ...previous, [label]: error instanceof Error ? error.message : 'Server tidak dapat dihubungi.' }));
       }
-    } catch (err) {
-      console.error('Gagal memuat data:', err);
-      setDataError(err instanceof Error ? err.message : 'Server tidak dapat dihubungi.');
-    }
+    };
+    const primary = [
+      read('Event', api.getEvents, setEvents),
+      read('Transaksi', api.getTransactions, setTransactions),
+    ];
+    if (currentUser.peran === 'Admin') primary.push(read('Pengguna', api.getUsers, setAllUsers));
+    if (currentUser.peran === 'Sponsor') primary.push(read('Organisasi', api.getOrganizations, setAllUsers));
+    const secondary = [read('Profil', () => api.getUser(currentUser.id), profile => {
+      setCurrentUser(previous => previous?.id === profile.id && JSON.stringify(previous) !== JSON.stringify(profile) ? profile : previous);
+    })];
+    if (currentUser.peran !== 'Admin') secondary.push(read('Dokumentasi', api.getAllDocs, setDocs));
+    const ready = Promise.all(primary).then(() => undefined);
+    const operation = { revision: startedRevision, ready };
+    activeLoad.current = operation;
+    void Promise.all([ready, ...secondary]).finally(() => {
+      if (activeLoad.current === operation) {
+        activeLoad.current = null;
+        lastRefresh.current = Date.now();
+      }
+    });
+    return ready;
   }, [currentUser?.id, currentUser?.peran]);
 
   useEffect(() => {
+    let mounted = true;
     const token = localStorage.getItem('unai_token');
     if (token && currentUser) {
-      loadAllData().finally(() => setLoading(false));
+      // Download only this role's dashboard, concurrently with its data.
+      void dashboardLoaders[currentUser.peran]().catch(() => {});
+      loadAllData().finally(() => { if (mounted) setLoading(false); });
     } else {
       setLoading(false);
     }
+    return () => { mounted = false; };
   }, [currentUser?.id, loadAllData]);
 
   useEffect(() => {
     if (!currentUser) return;
-    const refresh = () => { if (document.visibilityState === 'visible') void loadAllData(); };
+    const refresh = () => {
+      if (document.visibilityState === 'visible' && Date.now() - lastRefresh.current >= 15000) void loadAllData();
+    };
     const timer = window.setInterval(refresh, 30000);
     window.addEventListener('focus', refresh);
     return () => { window.clearInterval(timer); window.removeEventListener('focus', refresh); };
@@ -72,11 +107,20 @@ export default function App() {
   }, [currentUser]);
 
   const handleLoginSuccess = (user: User) => {
+    session.current++;
+    pendingWrites.current = 0;
+    revision.current++;
+    activeLoad.current = null;
+    lastRefresh.current = 0;
     setCurrentUser(user);
     setLoading(true);
   };
 
   const handleLogout = () => {
+    session.current++;
+    pendingWrites.current = 0;
+    revision.current++;
+    activeLoad.current = null;
     api.clearToken();
     localStorage.removeItem('unai_current_user');
     setCurrentUser(null);
@@ -84,96 +128,102 @@ export default function App() {
     setTransactions([]);
     setAllUsers([]);
     setDocs([]);
-    setDataError(null);
+    setDataErrors({});
   };
 
   const handleRegisterUser = async (data: any) => {
     await api.register(data);
   };
 
+  const save = async <T,>(action: () => Promise<T>, apply: (result: T) => void) => {
+    const token = localStorage.getItem('unai_token');
+    const startedSession = session.current;
+    revision.current++;
+    pendingWrites.current++;
+    try {
+      const result = await action();
+      if (startedSession === session.current && token === localStorage.getItem('unai_token')) apply(result);
+      return result;
+    } finally {
+      if (startedSession === session.current) {
+        revision.current++;
+        pendingWrites.current--;
+      }
+    }
+  };
+
   const handleCreateEvent = async (eventData: any) => {
-    const event = await api.createEvent(eventData);
-    setEvents(previous => [event, ...previous.filter(item => item.id_event !== event.id_event)]);
+    await save(() => api.createEvent(eventData), event =>
+      setEvents(previous => [event, ...previous.filter(item => item.id_event !== event.id_event)]));
   };
 
   const handleUpdateEvent = async (id: number, data: any) => {
-    const event = await api.updateEvent(id, data);
-    setEvents(previous => previous.map(item => item.id_event === id ? { ...item, ...event } : item));
+    await save(() => api.updateEvent(id, data), event =>
+      setEvents(previous => previous.map(item => item.id_event === id ? { ...item, ...event } : item)));
   };
 
   const handleUpdateEventStatus = async (id: number, status: string) => {
-    const event = await api.updateEventStatus(id, status);
-    setEvents(previous => previous.map(item => item.id_event === id ? { ...item, ...event } : item));
+    await save(() => api.updateEventStatus(id, status), event =>
+      setEvents(previous => previous.map(item => item.id_event === id ? { ...item, ...event } : item)));
   };
 
   const handleAddTransaction = async (txData: any) => {
-    await api.createTransaction(txData);
-    const txs = await api.getTransactions();
-    setTransactions(txs);
+    await save(() => api.createTransaction(txData), tx =>
+      setTransactions(previous => [tx, ...previous.filter(item => item.id_transaksi !== tx.id_transaksi)]));
   };
 
   const handleUpdateTransaction = async (id: number, data: FormData) => {
-    await api.updateTransaction(id, data);
-    setTransactions(await api.getTransactions());
+    await save(() => api.updateTransaction(id, data), tx =>
+      setTransactions(previous => previous.map(item => item.id_transaksi === id ? { ...item, ...tx } : item)));
   };
 
   const handleApproveUser = async (userId: number) => {
-    await api.updateUserStatus(userId, 'Aktif');
-    const users = await api.getUsers();
-    setAllUsers(users);
+    await save(() => api.updateUserStatus(userId, 'Aktif'), user =>
+      setAllUsers(previous => previous.map(item => item.id === userId ? user : item)));
   };
 
   const handleRejectUser = async (userId: number) => {
-    await api.updateUserStatus(userId, 'Ditolak');
-    const users = await api.getUsers();
-    setAllUsers(users);
+    await save(() => api.updateUserStatus(userId, 'Ditolak'), user =>
+      setAllUsers(previous => previous.map(item => item.id === userId ? user : item)));
   };
 
   const handleDeleteUser = async (userId: number) => {
-    await api.deleteUser(userId);
-    const users = await api.getUsers();
-    setAllUsers(users);
+    await save(() => api.deleteUser(userId), () =>
+      setAllUsers(previous => previous.filter(item => item.id !== userId)));
   };
 
   const handleApprovePayment = async (txId: number) => {
-    await api.verifyTransaction(txId, 'Diverifikasi');
-    const [txs, evts] = await Promise.all([api.getTransactions(), api.getEvents()]);
-    setTransactions(txs);
-    setEvents(evts);
+    const startedSession = session.current;
+    await save(() => api.verifyTransaction(txId, 'Diverifikasi'), tx =>
+      setTransactions(previous => previous.map(item => item.id_transaksi === txId ? { ...item, ...tx } : item)));
+    // Refresh funding/status after approval without delaying the successful action.
+    if (startedSession === session.current) void loadAllData();
   };
 
   const handleRejectPayment = async (txId: number) => {
-    await api.verifyTransaction(txId, 'Ditolak');
-    const txs = await api.getTransactions();
-    setTransactions(txs);
+    await save(() => api.verifyTransaction(txId, 'Ditolak'), tx =>
+      setTransactions(previous => previous.map(item => item.id_transaksi === txId ? { ...item, ...tx } : item)));
   };
 
   if (loading && currentUser) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#1a2c4d] mx-auto mb-4"></div>
-          <p className="text-xs text-gray-400 font-bold">Memuat data dari server...</p>
-        </div>
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
   return (
     <div id="app-root-container" className="min-h-screen min-h-[100dvh] bg-slate-50 flex flex-col font-sans">
-      {currentUser && dataError && (
+      {currentUser && Object.keys(dataErrors).length > 0 && (
         <div role="alert" className="border-b border-red-200 bg-red-50 p-4 text-sm text-red-800">
-          <p>Data belum berhasil dimuat. Tampilan kosong belum berarti data Anda terhapus.</p>
-          <p className="mt-1">{dataError}</p>
+          <p>Sebagian data belum berhasil dimuat. Tampilan kosong belum berarti data Anda terhapus.</p>
+          {Object.entries(dataErrors).map(([label, message]) => <p key={label} className="mt-1">{label}: {message}</p>)}
           <button type="button" className="mt-2 font-bold underline" onClick={() => {
-            setLoading(true);
-            void loadAllData().finally(() => setLoading(false));
+            void loadAllData();
           }}>Coba lagi</button>
           <button type="button" className="ml-4 font-bold underline" onClick={handleLogout}>Keluar / masuk ulang</button>
         </div>
       )}
       <div className="flex-1 flex overflow-hidden">
         <main className="flex-1 overflow-y-auto">
+          <Suspense fallback={<LoadingScreen />}>
           {currentUser ? (
             currentUser.peran === 'Organisasi' ? (
               <OrganizationDashboard
@@ -217,6 +267,7 @@ export default function App() {
               onRegisterUser={handleRegisterUser}
             />
           )}
+          </Suspense>
         </main>
       </div>
     </div>
