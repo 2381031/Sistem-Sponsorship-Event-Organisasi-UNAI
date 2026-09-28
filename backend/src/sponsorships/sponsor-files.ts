@@ -4,7 +4,7 @@ import { SponsorFile, packageMaterials } from './package-materials';
 
 let ready: Promise<unknown> | undefined;
 export function ensureSponsorFiles() {
-  if (!ready) ready = pool.query("ALTER TABLE transaksi_sponsorship ADD COLUMN IF NOT EXISTS sponsor_files JSONB NOT NULL DEFAULT '[]'::jsonb")
+  if (!ready) ready = pool.query("ALTER TABLE transaksi_sponsorship ADD COLUMN IF NOT EXISTS sponsor_files JSONB NOT NULL DEFAULT '[]'::jsonb, ADD COLUMN IF NOT EXISTS nama_pengirim VARCHAR(255)")
     .catch(error => { ready = undefined; throw error; });
   return ready;
 }

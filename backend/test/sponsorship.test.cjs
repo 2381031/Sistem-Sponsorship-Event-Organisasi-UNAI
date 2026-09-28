@@ -4,11 +4,12 @@ const pool = require('../dist/database').default;
 const { TransaksiService } = require('../dist/sponsorships/transaksi.service');
 const { EventService } = require('../dist/events/event.service');
 const { sponsorshipAmount } = require('../dist/events/funding');
+const { editDetails } = require('../dist/sponsorships/edit-details');
 
 // Simulate persistence without touching the configured database.
-function fixture({ status = 'Menunggu', owner = 7, otherApproved = 0, amount = 25, eventStatus = 'Dipublikasikan' } = {}) {
+function fixture({ status = 'Menunggu', owner = 7, otherApproved = 0, amount = 25, eventStatus = 'Dipublikasikan', files = [], benefits = '', verifyDuringEdit = false } = {}) {
   const event = { id_event: 1, id_organisasi: 10, nama_event: 'Event Uji', target_dana: '100', status_event: eventStatus, url_proposal: '/proposal.pdf' };
-  const tx = { id_transaksi: 2, id_event: 1, id_sponsor: owner, id_paket: 3, jumlah: amount, status_pembayaran: status, bukti_pembayaran: 'old.png' };
+  const tx = { id_transaksi: 2, id_event: 1, id_sponsor: owner, id_paket: 3, jumlah: amount, status_pembayaran: status, bukti_pembayaran: 'old.png', sponsor_files: files, nama_sponsor: 'Nama Salah', nama_pengirim: 'Pengirim Lama' };
   const statements = [];
   let released = false;
   const query = async (sql, params = []) => {
@@ -16,8 +17,18 @@ function fixture({ status = 'Menunggu', owner = 7, otherApproved = 0, amount = 2
     if (['BEGIN', 'COMMIT', 'ROLLBACK'].includes(sql)) return { rows: [] };
     if (sql.startsWith('ALTER TABLE transaksi_sponsorship ADD COLUMN IF NOT EXISTS sponsor_files')) return { rows: [] };
     if (sql.startsWith('SELECT id_pengguna FROM sponsor')) return { rows: [{ id_pengguna: 7 }] };
-    if (sql.startsWith('SELECT * FROM transaksi_sponsorship')) return { rows: [{ ...tx }] };
-    if (sql.startsWith('SELECT * FROM paket_sponsorship')) return { rows: params[0] === 3 ? [{ id_paket: 3, nama_paket: 'Silver', persentase_dana: '25' }] : [] };
+    if (sql.startsWith('SELECT * FROM transaksi_sponsorship')) {
+      if (verifyDuringEdit && sql.includes('FOR UPDATE')) tx.status_pembayaran = 'Diverifikasi';
+      return { rows: [{ ...tx }] };
+    }
+    if (sql.startsWith('SELECT * FROM paket_sponsorship')) {
+      const packages = [
+        { id_paket: 3, nama_paket: 'Silver', persentase_dana: '25', deskripsi_keuntungan: benefits },
+        { id_paket: 4, nama_paket: 'Gold', persentase_dana: '50', deskripsi_keuntungan: 'Logo dan brosur promosi produk' },
+        { id_paket: 5, nama_paket: 'Spesial', persentase_dana: '0' },
+      ];
+      return { rows: packages.filter(p => p.id_paket === params[0]) };
+    }
     if (sql.startsWith('SELECT') && sql.includes('FROM event')) return { rows: [{ ...event }] };
     if (sql.startsWith('UPDATE event e')) {
       assert.match(sql, /SUM\(t.jumlah\)/);
@@ -33,7 +44,8 @@ function fixture({ status = 'Menunggu', owner = 7, otherApproved = 0, amount = 2
       return { rows: [{ ...tx }] };
     }
     if (sql.startsWith('UPDATE transaksi_sponsorship SET id_paket')) {
-      Object.assign(tx, { id_paket: params[0], nama_paket: params[1], jumlah: params[2], bukti_pembayaran: params[3] });
+      assert.match(sql, /status_pembayaran = 'Menunggu'/);
+      Object.assign(tx, { id_paket: params[0], nama_paket: params[1], jumlah: params[2], bukti_pembayaran: params[3], sponsor_files: JSON.parse(params[5]), nama_sponsor: params[6], nama_pengirim: params[7] });
       return { rows: [{ ...tx }] };
     }
     if (sql.startsWith('UPDATE event SET')) {
@@ -57,6 +69,50 @@ test('pending owner can edit; server calculates amount and keeps old proof', asy
   assert.equal(result.status_pembayaran, 'Menunggu');
   assert.equal(f.statements.at(-1), 'COMMIT');
   assert.ok(f.released());
+});
+
+test('pending sponsorship can correct names, change package/proof, and remove optional files', async () => {
+  const logo = { kind: 'logo', name: 'logo.png', url: '/logo.png', mime: 'image/png' };
+  const brochure = { kind: 'promosi', name: 'wrong.pdf', url: '/wrong.pdf', mime: 'application/pdf' };
+  const oldProduct = { kind: 'produk', name: 'old.png', url: '/old.png', mime: 'image/png' };
+  const replacement = { ...oldProduct, name: 'new.png', url: '/new.png' };
+  const f = fixture({ files: [logo, brochure, oldProduct] });
+  const result = await f.service.update(2, 7, { id_paket: 4, jumlah: 9999, nama_sponsor: '  Nama Benar  ', nama_pengirim: ' Andre ', bukti_pembayaran: 'new-proof.png', remove_materials: ['promosi'], sponsor_files: [replacement] });
+  assert.equal(result.id_paket, 4);
+  assert.equal(result.jumlah, 50);
+  assert.equal(result.nama_sponsor, 'Nama Benar');
+  assert.equal(result.nama_pengirim, 'Andre');
+  assert.equal(result.bukti_pembayaran, 'new-proof.png');
+  assert.deepEqual(result.sponsor_files, [logo, replacement]);
+  assert.equal(result.status_pembayaran, 'Menunggu');
+  assert.equal(result.id_event, 1);
+  assert.equal(result.id_sponsor, 7);
+});
+
+test('special-package amount can be corrected and sender cleared, while absent fields are retained', async () => {
+  const f = fixture();
+  const result = await f.service.update(2, 7, { id_paket: 5, jumlah: 37.5, nama_pengirim: '' });
+  assert.equal(result.jumlah, 37.5);
+  assert.equal(result.nama_pengirim, null);
+  assert.equal(result.nama_sponsor, 'Nama Salah');
+  assert.equal(result.bukti_pembayaran, 'old.png');
+});
+
+test('required logo cannot be removed and a newly verified transaction cannot be edited', async () => {
+  const f = fixture({ files: [{ kind: 'logo', name: 'logo.png', url: '/logo.png', mime: 'image/png' }] });
+  await assert.rejects(f.service.update(2, 7, { id_paket: 4, remove_materials: ['logo'] }), /logo/);
+  assert.equal(f.statements.at(-1), 'ROLLBACK');
+  assert.ok(!f.statements.some(sql => sql.startsWith('UPDATE transaksi')));
+  const race = fixture({ verifyDuringEdit: true });
+  await assert.rejects(race.service.update(2, 7, { nama_sponsor: 'Baru' }), /Menunggu/);
+  assert.ok(!race.statements.some(sql => sql.startsWith('UPDATE transaksi')));
+});
+
+test('edit inputs reject malformed names or removal instructions', () => {
+  for (const data of [{ nama_sponsor: '' }, { nama_sponsor: ['fake'] }, { nama_pengirim: 'x'.repeat(256) }, { remove_materials: 'invalid json' }, { remove_materials: { promosi: true } }, { remove_materials: ['bukti_pembayaran'] }]) {
+    assert.throws(() => editDetails(data), error => error.getStatus() === 400);
+  }
+  assert.deepEqual(editDetails({ remove_materials: '["promosi"]' }).remove_materials, ['promosi']);
 });
 
 test('edit rejects approved/rejected transactions, another owner, and unrelated package', async () => {
@@ -90,6 +146,17 @@ test('duplicate approval is rejected', async () => {
   const f = fixture({ status: 'Diverifikasi' });
   await assert.rejects(f.service.updateStatus(2, 'Diverifikasi'), /sudah diproses/);
   assert.equal(f.statements.at(-1), 'ROLLBACK');
+});
+
+test('rejection persists and cannot overwrite approved or previously rejected payments', async () => {
+  const pending = fixture();
+  assert.equal((await pending.service.updateStatus(2, 'Ditolak')).status_pembayaran, 'Ditolak');
+  for (const status of ['Diverifikasi', 'Ditolak']) {
+    const f = fixture({ status });
+    await assert.rejects(f.service.updateStatus(2, 'Ditolak'), /sudah diproses/);
+    assert.equal(f.tx.status_pembayaran, status);
+    assert.equal(f.statements.at(-1), 'ROLLBACK');
+  }
 });
 
 test('closed events reject new sponsorships', async () => {

@@ -8,3 +8,6 @@ coverage/
 !.env.example
 api/_backend.js
 *.tsbuildinfo
+tmp/
+hasil-revisi-jurnal/
+backend/uploads/

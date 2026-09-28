@@ -134,12 +134,12 @@ test('status updates return the refreshed profile and preserve not-found behavio
   pool.query = async (sql, params) => {
     queries++;
     if (sql.startsWith('UPDATE')) return { rows: params[1] === 2 ? [{ id_pengguna: 2 }] : [] };
-    return { rows: [user] };
+    return { rows: params[0] === 2 ? [user] : [] };
   };
   try {
     assert.deepEqual(await new UserService().updateStatus(2, 'Aktif'), user);
     assert.equal(queries, 2);
     await assert.rejects(new UserService().updateStatus(999, 'Aktif'), /User not found/);
-    assert.equal(queries, 3);
+    assert.equal(queries, 4);
   } finally { pool.query = original; }
 });

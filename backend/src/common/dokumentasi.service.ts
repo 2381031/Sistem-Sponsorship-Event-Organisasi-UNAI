@@ -12,17 +12,15 @@ export class DokumentasiService {
     return result.rows[0];
   }
 
-  async findByEvent(idEvent: number) {
-    const result = await pool.query('SELECT * FROM dokumentasi WHERE id_event = $1', [idEvent]);
-    return result.rows;
-  }
-
-  async findAll(user: any) {
+  async findAll(user: any, idEvent?: number) {
     const result = await pool.query(`SELECT d.* FROM dokumentasi d JOIN event e ON e.id_event = d.id_event
-      WHERE $1 = 'Admin' OR e.id_organisasi = $2
-      OR ($1 = 'Sponsor' AND (e.status_event IN ('Dipublikasikan', 'published', 'open', 'terbuka', 'Ditutup', 'closed')
-        OR EXISTS (SELECT 1 FROM transaksi_sponsorship t WHERE t.id_event = e.id_event AND t.id_sponsor = $2)))
-      ORDER BY d.id_dokumentasi DESC`, [user.peran, user.id_pengguna]);
+      WHERE ($3::integer IS NULL OR d.id_event = $3)
+      AND ($1 = 'Admin' OR ($1 = 'Organisasi' AND e.id_organisasi = $2)
+        OR ($1 = 'Sponsor' AND EXISTS (
+          SELECT 1 FROM transaksi_sponsorship t
+          WHERE t.id_event = e.id_event AND t.id_sponsor = $2 AND t.status_pembayaran = 'Diverifikasi'
+        )))
+      ORDER BY d.id_dokumentasi DESC`, [user.peran, user.id_pengguna, idEvent ?? null]);
     return result.rows;
   }
 

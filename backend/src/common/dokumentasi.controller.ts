@@ -25,6 +25,7 @@ export class DokumentasiController {
   }))
   @Post()
   async create(@Body() body: any, @Request() req: any, @UploadedFile() file: any) {
+    if (req.user.peran !== 'Organisasi') throw new ForbiddenException('Hanya organisasi yang dapat mengunggah dokumentasi');
     const format = documentFormat(file);
     const idEvent = Number(body.id_event);
     if (!Number.isSafeInteger(idEvent) || idEvent <= 0) throw new BadRequestException('ID event tidak valid');
@@ -58,7 +59,7 @@ export class DokumentasiController {
 
   @Get('event/:idEvent')
   async findByEvent(@Param('idEvent', ParseIntPipe) idEvent: number, @Request() req: any) {
-    return (await this.dokumentasiService.findAll(req.user)).filter(doc => doc.id_event === idEvent);
+    return this.dokumentasiService.findAll(req.user, idEvent);
   }
 
   @UseGuards(JwtAuthGuard)

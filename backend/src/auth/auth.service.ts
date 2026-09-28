@@ -37,6 +37,7 @@ export class AuthService {
 
     if (user.status_akun === 'Ditolak')
       throw new UnauthorizedException('Akun ditolak oleh administrator');
+    if (user.status_akun === 'Dihapus') throw new UnauthorizedException('Akun telah dihapus oleh administrator');
     if (user.status_akun !== 'Aktif') throw new UnauthorizedException('Akun belum aktif');
 
     const payload = { sub: user.id_pengguna, email: user.email, role: user.peran };

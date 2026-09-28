@@ -12,10 +12,7 @@ Backend aplikasi sponsorship event UNAI menggunakan NestJS dan PostgreSQL.
    ```bash
    npm install
    ```
-3. Salin file `.env.example` ke `.env` dan konfigurasi `DATABASE_URL` ke NeonDB:
-   ```bash
-   cp .env.example .env
-   ```
+3. Buat file `.env` dengan `DATABASE_URL` untuk PostgreSQL/Neon dan `JWT_SECRET` untuk penandatanganan token. Untuk penyimpanan Vercel Blob, tambahkan `BLOB_READ_WRITE_TOKEN`.
 4. Jalankan server dalam mode pengembangan:
    ```bash
    npm run start:dev
@@ -32,10 +29,8 @@ Backend aplikasi sponsorship event UNAI menggunakan NestJS dan PostgreSQL.
 
 ## Catatan
 
-Akses PostgreSQL menggunakan `pg` dan query berparameter. Jangan jalankan `schema.sql` atau `init-db.ts` pada database berisi data karena skrip tersebut menyiapkan ulang tabel.
+Akses PostgreSQL menggunakan `pg` dan query berparameter. `schema.sql` disediakan untuk menyiapkan database baru dan mengandung penghapusan tabel. Jangan jalankan pada database berisi data. Folder `migrations` berisi perubahan skema yang diperlukan aplikasi. `sync-diagram.sql` merupakan skrip pemeliharaan skema lama dan perlu ditinjau sebelum dijalankan, termasuk penghapusan tabel notifikasi lama.
 
 Dokumentasi mendukung JPG, PDF, dan MP4 maksimal 4 MB per file. Untuk Vercel, konfigurasi `BLOB_READ_WRITE_TOKEN`; lokal menggunakan direktori `uploads/dokumentasi`. Proposal event tetap PDF maksimal 10 MB pada validasi aplikasi; batas unggahan hosting juga berlaku.
 
-Notifikasi edit sponsorship disimpan pada tabel tambahan `notifications`. Aplikasi membuat tabel ini dengan `CREATE TABLE IF NOT EXISTS` ketika pertama kali digunakan (akun database memerlukan izin CREATE). Tidak ada penghapusan tabel atau data lama. Perubahan transaksi dan pencatatan notifikasinya menggunakan satu transaksi database.
-
-Jalankan `npm test` untuk pengujian otomatis dengan database simulasi. Daftar pengujian pengguna ada di `../docs/UJI-KEBUTUHAN-JURNAL.md`. Pengujian simulasi bukan pengganti uji langsung database dan penyimpanan hosting.
+Jalankan `npm test` untuk pengujian otomatis dengan database simulasi. Pengujian simulasi bukan pengganti uji langsung database dan penyimpanan hosting.

@@ -3,6 +3,7 @@ import { User, Event, SponsorshipTransaction, EventDoc } from '../types';
 import { api } from '../api';
 import DocumentGallery, { documentUrl } from './DocumentGallery';
 import { MaterialInputs, MaterialFiles, MaterialSelection, attachMaterials, validateSelection } from './SponsorMaterials';
+import type { MaterialKind } from '../../backend/src/sponsorships/package-materials';
 import {
   Search, ArrowLeft, Check, Edit2, FileText, Upload, Landmark, History,
   User as UserIcon, Calendar, MapPin, Building, ShieldAlert, CheckCircle2,
@@ -17,11 +18,13 @@ interface Props {
   allUsers: User[];
   onAddTransaction: (data: any) => Promise<void>;
   onUpdateTransaction: (id: number, data: FormData) => Promise<void>;
+  onUpdateProfile: (data: any) => Promise<void>;
   onLogout: () => void;
 }
 
-export default function SponsorDashboard({ currentUser, events, transactions, docs, allUsers, onAddTransaction, onUpdateTransaction, onLogout }: Props) {
+export default function SponsorDashboard({ currentUser, events, transactions, docs, allUsers, onAddTransaction, onUpdateTransaction, onUpdateProfile, onLogout }: Props) {
   const profil = currentUser.profil;
+  const savedNama = profil?.nama_perusahaan || '';
   const [activeTab, setActiveTab] = useState<'browse' | 'riwayat' | 'profil'>('browse');
   const [currentStep, setCurrentStep] = useState<'list' | 'pilih-paket' | 'bukti-bayar'>('list');
   const [searchTerm, setSearchTerm] = useState('');
@@ -37,6 +40,9 @@ export default function SponsorDashboard({ currentUser, events, transactions, do
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editPackageId, setEditPackageId] = useState('');
   const [editAmount, setEditAmount] = useState('');
+  const [editSponsorName, setEditSponsorName] = useState('');
+  const [editSenderName, setEditSenderName] = useState('');
+  const [editRemovedMaterials, setEditRemovedMaterials] = useState<MaterialKind[]>([]);
   const [editProof, setEditProof] = useState<File | null>(null);
   const [editError, setEditError] = useState('');
   const [editSuccess, setEditSuccess] = useState('');
@@ -61,19 +67,21 @@ export default function SponsorDashboard({ currentUser, events, transactions, do
     setEditError('');
     const paket = event.paket_tersedia.find(p => p.id_paket === Number(editPackageId));
     if (!paket) { setEditError('Pilih paket sponsorship.'); return; }
-    const materialError = validateSelection(paket, editMaterials, editProof, tx.sponsor_files);
+    if (!editSponsorName.trim() || editSponsorName.trim().length > 255 || editSenderName.trim().length > 255) {
+      setEditError('Isi nama sponsor. Nama sponsor dan pengirim maksimal 255 karakter.'); return;
+    }
+    const materialError = validateSelection(paket, editMaterials, editProof, (tx.sponsor_files || []).filter(file => !editRemovedMaterials.includes(file.kind)));
     if (materialError) { setEditError(materialError); return; }
     const amount = Number(paket.persentase_dana) > 0
       ? Math.round(Number(event.target_dana) * Number(paket.persentase_dana)) / 100 : Number(editAmount);
     if (!Number.isFinite(amount) || amount <= 0) { setEditError('Nominal harus lebih dari nol.'); return; }
-    if (editProof && (!editProof.type.startsWith('image/') || editProof.size > 5 * 1024 * 1024)) {
-      setEditError('Bukti pembayaran harus berupa gambar maksimal 5 MB.'); return;
-    }
     const data = new FormData();
     data.append('id_paket', String(paket.id_paket));
     data.append('jumlah', String(amount));
+    data.append('nama_sponsor', editSponsorName.trim());
+    data.append('nama_pengirim', editSenderName.trim());
     if (editProof) data.append('bukti_pembayaran', editProof);
-    attachMaterials(data, editMaterials);
+    attachMaterials(data, editMaterials, editRemovedMaterials);
     editPending.current = true;
     setEditLoading(true);
     try {
@@ -125,7 +133,8 @@ export default function SponsorDashboard({ currentUser, events, transactions, do
     setProfileLoading(true);
     setProfileSuccess('');
     try {
-      await api.updateUser(currentUser.id, {
+      await onUpdateProfile({
+        email: profileEmail.trim(),
         sponsorDetails: { nama_perusahaan: profileNama, alamat: profileAlamat, no_telp: profileNoTelp, website: profileWebsite.trim() },
       });
       setProfileSuccess('Profil berhasil diperbarui!');
@@ -165,7 +174,7 @@ export default function SponsorDashboard({ currentUser, events, transactions, do
           : Number(customAmount) || 0
       ));
       fd.append('nama_event', selectedEvent.nama_event);
-      fd.append('nama_sponsor', profileNama);
+      fd.append('nama_sponsor', savedNama);
       fd.append('nama_paket', selectedPackage.nama_paket);
       fd.append('bukti_pembayaran', buktiFile);
       attachMaterials(fd, materials);
@@ -187,8 +196,8 @@ export default function SponsorDashboard({ currentUser, events, transactions, do
     <div className="bg-[#f8fafc] min-h-screen">
       <div className="bg-[#1a2c4d] text-white px-4 md:px-6 py-3 md:py-4 flex items-center justify-between shadow-md shrink-0">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="h-10 w-10 bg-white/10 rounded-xl flex items-center justify-center font-bold text-emerald-400 shrink-0">{profileNama.substring(0, 2).toUpperCase()}</div>
-          <div className="min-w-0"><h1 className="text-sm font-bold truncate">{profileNama}</h1><p className="text-[10px] text-emerald-400 font-mono">Sponsor</p></div>
+          <div className="h-10 w-10 bg-white/10 rounded-xl flex items-center justify-center font-bold text-emerald-400 shrink-0">{savedNama.substring(0, 2).toUpperCase()}</div>
+          <div className="min-w-0"><h1 className="text-sm font-bold truncate">{savedNama}</h1><p className="text-[10px] text-emerald-400 font-mono">Sponsor</p></div>
         </div>
         <button onClick={onLogout} className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-gray-300 hover:text-white transition-all shrink-0"><LogOut className="h-4 w-4" /></button>
       </div>
@@ -313,7 +322,7 @@ export default function SponsorDashboard({ currentUser, events, transactions, do
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-gray-700">Upload Bukti Transfer</label>
                 <div className="border border-dashed border-gray-200 rounded-2xl p-6 text-center bg-[#f8fafc] relative cursor-pointer">
-                  <input type="file" required accept="image/*" onChange={handleBuktiChange} className="absolute inset-0 opacity-0 cursor-pointer" />
+                  <input type="file" required accept="image/png,image/jpeg" onChange={handleBuktiChange} className="absolute inset-0 opacity-0 cursor-pointer" />
                   <FileText className="h-6 w-6 text-gray-400 mx-auto mb-2" />
                   <p className="text-xs font-bold text-gray-500">{buktiFile ? buktiFile.name : 'Pilih File bukti transfer'}</p>
                 </div>
@@ -363,7 +372,7 @@ export default function SponsorDashboard({ currentUser, events, transactions, do
                 <div key={tx.id_transaksi} className="bg-white rounded-3xl border border-gray-100 p-5 shadow-sm space-y-4">
                   <div className="flex justify-between items-start">
                     <h3 className="text-base font-bold text-[#1a2c4d]">{tx.nama_event || `Event #${tx.id_event}`}</h3>
-                    <span className={`px-2.5 py-0.5 rounded text-[10px] font-bold uppercase ${tx.status_pembayaran === 'Diverifikasi' ? 'bg-[#e2f6ec] text-[#2ebd7d]' : 'bg-[#fffbeb] text-[#d97706]'}`}>
+                    <span className={`px-2.5 py-0.5 rounded text-[10px] font-bold uppercase ${tx.status_pembayaran === 'Diverifikasi' ? 'bg-[#e2f6ec] text-[#2ebd7d]' : tx.status_pembayaran === 'Ditolak' ? 'bg-red-50 text-red-600' : 'bg-[#fffbeb] text-[#d97706]'}`}>
                       {tx.status_pembayaran.toUpperCase()}
                     </span>
                   </div>
@@ -371,37 +380,55 @@ export default function SponsorDashboard({ currentUser, events, transactions, do
                     <div><p className="text-gray-400 font-medium">Paket</p><p className="font-extrabold text-[#d97706] mt-0.5">{tx.nama_paket}</p></div>
                     <div><p className="text-gray-400 font-medium">Jumlah</p><p className="font-extrabold text-[#1a2c4d] mt-0.5 font-mono">{formatIDR(tx.jumlah)}</p></div>
                     <div><p className="text-gray-400 font-medium">Tanggal</p><p className="font-bold text-gray-700 mt-0.5">{new Date(tx.tanggal_transaksi).toLocaleDateString('id-ID')}</p></div>
+                    <div><p className="text-gray-400 font-medium">Nama Sponsor</p><p className="font-bold text-gray-700 mt-0.5">{tx.nama_sponsor || savedNama}</p></div>
+                    {tx.nama_pengirim && <div><p className="text-gray-400 font-medium">Pengirim Transfer</p><p className="font-bold text-gray-700 mt-0.5">{tx.nama_pengirim}</p></div>}
                   </div>
                   {tx.status_pembayaran === 'Menunggu' && event && (
                     editingId === tx.id_transaksi ? (
-                      <form onSubmit={e => handleEdit(e, tx, event)} className="space-y-3 rounded-xl border border-blue-100 bg-blue-50 p-3 text-xs">
+                      <form aria-label={`Edit sponsorship ${tx.nama_event || event.nama_event}`} onSubmit={e => handleEdit(e, tx, event)} className="space-y-3 rounded-xl border border-blue-100 bg-blue-50 p-3 text-xs">
+                        <fieldset disabled={editLoading} className="space-y-3">
                         <p className="font-bold">Edit Sponsorship</p>
+                        <p>Perbaiki data pengajuan selama status masih Menunggu. Perubahan nama di sini berlaku untuk pengajuan ini.</p>
+                        <label className="block">Nama sponsor / perusahaan
+                          <input name="nama_sponsor" type="text" required maxLength={255} value={editSponsorName} onChange={e => setEditSponsorName(e.target.value)} className="mt-1 w-full rounded-lg border p-2" />
+                        </label>
+                        <label className="block">Nama pengirim transfer (opsional)
+                          <input name="nama_pengirim" type="text" maxLength={255} value={editSenderName} onChange={e => setEditSenderName(e.target.value)} className="mt-1 w-full rounded-lg border p-2" />
+                        </label>
                         <label className="block">Paket Sponsorship
-                          <select required value={editPackageId} onChange={e => { setEditPackageId(e.target.value); setEditMaterials({}); }} className="mt-1 w-full rounded-lg border p-2">
+                          <select required value={editPackageId} onChange={e => { setEditPackageId(e.target.value); setEditMaterials({}); setEditRemovedMaterials([]); setEditError(''); }} className="mt-1 w-full rounded-lg border p-2">
                             {event.paket_tersedia.map(p => <option key={p.id_paket} value={p.id_paket}>{p.nama_paket}</option>)}
                           </select>
                         </label>
                         {editPackage && Number(editPackage.persentase_dana) === 0 ? (
                           <label className="block">Nominal (Rp)<input type="number" min="0.01" step="0.01" required value={editAmount} onChange={e => setEditAmount(e.target.value)} className="mt-1 w-full rounded-lg border p-2" /></label>
-                        ) : <p>Nominal: {formatIDR(Math.round(Number(event.target_dana) * Number(editPackage?.persentase_dana || 0)) / 100)}</p>}
-                        {editPackage && <MaterialInputs key={editPackage.id_paket} paket={editPackage} value={editMaterials} onChange={setEditMaterials} existing={tx.sponsor_files} />}
+                        ) : <p>Nominal sesuai paket: {formatIDR(Math.round(Number(event.target_dana) * Number(editPackage?.persentase_dana || 0)) / 100)}</p>}
+                        {editPackage?.deskripsi_keuntungan && <p className="whitespace-pre-line">Manfaat paket: {editPackage.deskripsi_keuntungan}</p>}
+                        {editPackage && <MaterialInputs key={editPackage.id_paket} paket={editPackage} value={editMaterials} onChange={setEditMaterials} existing={tx.sponsor_files} removed={editRemovedMaterials}
+                          onToggleRemoval={kind => {
+                            setEditRemovedMaterials(previous => previous.includes(kind) ? previous.filter(item => item !== kind) : [...previous, kind]);
+                            setEditMaterials(previous => { const next = { ...previous }; delete next[kind]; return next; });
+                          }} />}
                         <label className="block">Ganti bukti pembayaran (opsional, JPG/PNG)
-                          <input type="file" accept="image/*" onChange={e => setEditProof(e.target.files?.[0] || null)} className="mt-1 block w-full" />
+                          <input name="bukti_pembayaran" type="file" accept="image/png,image/jpeg" onChange={e => setEditProof(e.target.files?.[0] || null)} className="mt-1 block w-full" />
                         </label>
+                        {documentUrl(tx.bukti_pembayaran) && <a href={documentUrl(tx.bukti_pembayaran)!} target="_blank" rel="noreferrer" className="inline-block font-bold text-blue-700 underline">Lihat bukti pembayaran tersimpan</a>}
                         <p>Pastikan bukti pembayaran sesuai nominal terbaru. Bukti sebelumnya tetap digunakan jika tidak diganti.</p>
                         {editError && <p role="alert" className="text-red-600">{editError}</p>}
                         <div className="flex gap-3">
                           <button type="submit" disabled={editLoading} className="rounded-lg bg-[#1a2c4d] p-2 text-white disabled:opacity-50">{editLoading ? 'Menyimpan...' : 'Simpan Perubahan'}</button>
                           <button type="button" disabled={editLoading} onClick={() => setEditingId(null)}>Batal</button>
                         </div>
+                        </fieldset>
                       </form>
-                    ) : <button type="button" disabled={editLoading} onClick={() => { setEditingId(tx.id_transaksi); setEditMaterials({}); setEditPackageId(String(tx.id_paket)); setEditAmount(String(tx.jumlah)); setEditProof(null); setEditError(''); setEditSuccess(''); }} className="text-xs font-bold text-blue-700 hover:underline">Edit Sponsorship</button>
+                    ) : <button type="button" disabled={editLoading} onClick={() => { setEditingId(tx.id_transaksi); setEditSponsorName(tx.nama_sponsor || savedNama); setEditSenderName(tx.nama_pengirim || ''); setEditRemovedMaterials([]); setEditMaterials({}); setEditPackageId(String(tx.id_paket)); setEditAmount(String(tx.jumlah)); setEditProof(null); setEditError(''); setEditSuccess(''); }} className="text-xs font-bold text-blue-700 hover:underline">Edit Sponsorship</button>
                   )}
+                  {tx.status_pembayaran !== 'Menunggu' && <p className="text-xs text-gray-500">Sponsorship sudah diproses admin dan tidak dapat diedit.</p>}
                   <div className="space-y-2 pt-2 border-t border-gray-50">
                     <p className="text-xs text-gray-500 font-bold">Proposal Event Organisasi</p>
-                    {proposalUrl ? <a href={proposalUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-xs font-bold text-blue-700 hover:underline"><FileText className="h-4 w-4" /> Lihat Proposal Event Organisasi</a> : <p className="text-xs text-gray-400">Proposal dokumentasi event belum tersedia.</p>}
+                    {proposalUrl ? <a href={proposalUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-xs font-bold text-blue-700 hover:underline"><FileText className="h-4 w-4" /> Lihat Proposal Event Organisasi</a> : <p className="text-xs text-gray-400">Proposal event organisasi belum tersedia.</p>}
                   </div>
-                  {eventDocs.length > 0 && <DocumentGallery docs={eventDocs} />}
+                  {(tx.status_pembayaran === 'Diverifikasi' || eventDocs.length > 0) && <DocumentGallery docs={eventDocs} />}
                   <MaterialFiles files={tx.sponsor_files} />
                 </div>
               ); })}
@@ -417,7 +444,7 @@ export default function SponsorDashboard({ currentUser, events, transactions, do
               <div className="space-y-1"><label className="text-xs font-bold text-gray-700">Nama Perusahaan <span className="text-red-500">*</span></label>
                 <input type="text" required value={profileNama} onChange={(e) => setProfileNama(e.target.value)} className="w-full px-4 py-3 text-xs bg-white border border-gray-100 rounded-xl focus:outline-none" /></div>
               <div className="space-y-1"><label className="text-xs font-bold text-gray-700">Email <span className="text-red-500">*</span></label>
-                <input type="email" required value={profileEmail} onChange={(e) => setProfileEmail(e.target.value)} className="w-full px-4 py-3 text-xs bg-white border border-gray-100 rounded-xl focus:outline-none text-gray-400" /></div>
+                <input name="email" type="email" required maxLength={255} value={profileEmail} onChange={(e) => setProfileEmail(e.target.value)} className="w-full px-4 py-3 text-xs bg-white border border-gray-100 rounded-xl focus:outline-none" /></div>
               <div className="space-y-1"><label className="text-xs font-bold text-gray-700">No. Telepon <span className="text-red-500">*</span></label>
                 <input type="text" required value={profileNoTelp} onChange={(e) => setProfileNoTelp(e.target.value)} className="w-full px-4 py-3 text-xs bg-white border border-gray-100 rounded-xl focus:outline-none" /></div>
               <div className="space-y-1"><label className="text-xs font-bold text-gray-700">Alamat <span className="text-red-500">*</span></label>
@@ -433,10 +460,10 @@ export default function SponsorDashboard({ currentUser, events, transactions, do
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 w-full bg-white border-t border-gray-100 px-4 py-2 flex justify-around shadow-[0_-4px_20px_rgba(0,0,0,0.03)] z-40 max-w-6xl mx-auto">
-        {([['browse', 'Cari Event', Search], ['riwayat', 'Riwayat', FileText], ['profil', 'Profil', UserIcon]] as const).map(([tab, label, Icon]) => (
+        {([['browse', 'Cari Event', Search], ['riwayat', 'Riwayat Sponsorship Saya', FileText], ['profil', 'Profil', UserIcon]] as const).map(([tab, label, Icon]) => (
           <button key={tab} onClick={() => { setActiveTab(tab); setCurrentStep('list'); }}
             className={`flex flex-col items-center gap-1 py-1 ${activeTab === tab ? 'text-[#1a2c4d]' : 'text-gray-400'}`}>
-            <Icon className="h-5 w-5" /><span className="text-[10px] font-bold">{label}</span>
+            <Icon className="h-5 w-5" /><span className="max-w-28 text-center text-[10px] font-bold leading-tight">{label}</span>
           </button>
         ))}
       </div>

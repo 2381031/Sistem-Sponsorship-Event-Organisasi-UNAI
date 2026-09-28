@@ -65,6 +65,6 @@ export class UserController {
     if (req.user.peran !== 'Admin') throw new ForbiddenException('Hanya Admin yang dapat menghapus pengguna');
     if (id === req.user.id_pengguna) throw new BadRequestException('Akun admin yang sedang digunakan tidak dapat dihapus');
     await this.userService.delete(id);
-    return { message: 'User deleted' };
+    return { message: 'Akun dihapus dari aplikasi. Akses login dihentikan dan riwayat sponsorship tetap tersimpan.' };
   }
 }

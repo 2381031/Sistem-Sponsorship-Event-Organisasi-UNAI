@@ -6,6 +6,7 @@ import { uploadSubmission, saveSubmission } from './material-upload';
 import { BadRequestException } from '@nestjs/common';
 import { TransaksiService } from './transaksi.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { editDetails } from './edit-details';
 
 @UseGuards(JwtAuthGuard)
 @Controller('sponsorships')
@@ -73,8 +74,10 @@ export class TransaksiController {
     const existing = await this.transaksiService.findOne(id);
     if (existing.id_sponsor !== req.user.id_pengguna) throw new ForbiddenException('Anda bukan pemilik transaksi');
     if (existing.status_pembayaran !== 'Menunggu') throw new BadRequestException('Transaksi sudah diproses oleh admin');
+    const details = editDetails(body);
     const saved = await saveSubmission(files);
     try { return await this.transaksiService.update(id, req.user.id_pengguna, {
+      ...details,
       jumlah: body.jumlah,
       bukti_pembayaran: saved.proof,
       sponsor_files: saved.materials,

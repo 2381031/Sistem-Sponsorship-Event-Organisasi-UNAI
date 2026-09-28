@@ -1,5 +1,5 @@
 export type Role = 'Organisasi' | 'Sponsor' | 'Admin';
-export type AccountStatus = 'Menunggu Verifikasi' | 'Aktif' | 'Ditolak';
+export type AccountStatus = 'Menunggu Verifikasi' | 'Aktif' | 'Ditolak' | 'Dihapus';
 export type EventStatus = 'Draft' | 'Dipublikasikan' | 'Ditutup';
 export type TransactionStatus = 'Menunggu' | 'Diverifikasi' | 'Ditolak';
 
@@ -58,4 +58,3 @@ export interface EventDoc {
   url_file: string;
   tipe_file: string | null;
 }
-

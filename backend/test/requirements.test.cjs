@@ -53,6 +53,22 @@ test('registration cannot create an admin and stale JWT cannot access disabled a
   assert.equal((await new JwtStrategy().validate({ sub: 7, role: 'Admin' })).peran, 'Sponsor');
 });
 
+test('only admin can reject accounts or payments; self deletion is blocked', async () => {
+  const decisions = [];
+  const users = new UserController({ updateStatus: async (...args) => decisions.push(args), delete: async id => decisions.push(['delete', id]) });
+  const payments = new TransaksiController({ updateStatus: async (...args) => decisions.push(args) });
+  for (const role of ['Sponsor', 'Organisasi']) {
+    await assert.rejects(users.updateStatus(8, 'Ditolak', req(role)), /Admin/);
+    await assert.rejects(payments.verify(31, 'Ditolak', req(role)), /Admin/);
+    await assert.rejects(users.delete(8, req(role)), /Admin/);
+  }
+  assert.deepEqual(decisions, []);
+  await users.updateStatus(8, 'Ditolak', req('Admin'));
+  await payments.verify(31, 'Ditolak', req('Admin'));
+  assert.deepEqual(decisions, [[8, 'Ditolak', 7], [31, 'Ditolak']]);
+  await assert.rejects(users.delete(7, req('Admin')), /sedang digunakan/);
+});
+
 test('transactions use server-side role/owner filters', async () => {
   for (const role of ['Sponsor', 'Organisasi', 'Admin']) {
     pool.query = async (sql, params) => {
@@ -72,3 +88,39 @@ test('non-owner cannot delete event or documentation', async () => {
   await assert.rejects(new DokumentasiService().delete(1, req('Organisasi').user), /pemilik/);
 });
 
+test('documentation upload requires the organization that owns the event', async () => {
+  const controller = new DokumentasiController({ create: () => assert.fail('Unauthorized upload was saved') });
+  const file = { mimetype: 'application/pdf', buffer: Buffer.from('%PDF-1.4') };
+  await assert.rejects(controller.create({ id_event: 1 }, req('Sponsor'), file), /Hanya organisasi/);
+  pool.query = async () => ({ rows: [{ id_organisasi: 8 }] });
+  await assert.rejects(controller.create({ id_event: 1 }, req('Organisasi'), file), /pemilik event/);
+  await assert.rejects(controller.create({ id_event: 'invalid' }, req('Organisasi'), file), /ID event/);
+  pool.query = async () => ({ rows: [] });
+  await assert.rejects(controller.create({ id_event: 1 }, req('Organisasi'), file), /Event tidak ditemukan/);
+});
+
+test('documentation query scopes sponsors to verified contributions to the same event', async () => {
+  for (const role of ['Sponsor', 'Organisasi', 'Admin']) {
+    pool.query = async (sql, params) => {
+      assert.deepEqual(params, [role, 7, null]);
+      assert.match(sql, /\$1 = 'Admin'/);
+      assert.match(sql, /\$1 = 'Organisasi' AND e.id_organisasi = \$2/);
+      assert.match(sql, /\$1 = 'Sponsor' AND EXISTS/);
+      assert.match(sql, /t.id_event = e.id_event AND t.id_sponsor = \$2 AND t.status_pembayaran = 'Diverifikasi'/);
+      assert.doesNotMatch(sql, /e.status_event IN/);
+      return { rows: [] };
+    };
+    await new DokumentasiService().findAll(req(role).user);
+  }
+});
+
+test('event documentation route preserves access scope and filters event in the database', async () => {
+  pool.query = async (sql, params) => {
+    assert.deepEqual(params, ['Sponsor', 7, 11]);
+    assert.match(sql, /d.id_event = \$3/);
+    assert.match(sql, /t.status_pembayaran = 'Diverifikasi'/);
+    return { rows: [{ id_dokumentasi: 1, id_event: 11 }] };
+  };
+  const docs = await new DokumentasiController(new DokumentasiService()).findByEvent(11, req('Sponsor'));
+  assert.equal(docs[0].id_event, 11);
+});

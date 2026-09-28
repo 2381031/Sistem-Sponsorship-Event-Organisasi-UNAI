@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react';
 import { User, Event, SponsorshipTransaction } from '../types';
 import { api } from '../api';
 import { documentUrl } from './DocumentGallery';
+import { MaterialFiles } from './SponsorMaterials';
 import { Users, ShieldCheck, Landmark, Trash2, Check, X, FileText, LogOut } from 'lucide-react';
 
 interface Props {
@@ -37,7 +38,8 @@ export default function AdminDashboard({
 
   const formatIDR = (num: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(num);
 
-  const pendingAccounts = allUsers.filter(u => u.status_akun === 'Menunggu Verifikasi');
+  const visibleUsers = allUsers.filter(u => u.status_akun !== 'Dihapus');
+  const pendingAccounts = visibleUsers.filter(u => u.peran !== 'Admin' && u.status_akun === 'Menunggu Verifikasi');
   const pendingPayments = transactions.filter(t => t.status_pembayaran === 'Menunggu');
 
   const getUserDisplayName = (u: User) => {
@@ -59,15 +61,16 @@ export default function AdminDashboard({
       <div className="flex-1 max-w-6xl w-full mx-auto px-4 pt-4 md:pt-6 pb-28">
         {actionMessage && <p role="status" className="mb-3 rounded-lg bg-green-50 p-3 text-xs text-green-700">{actionMessage}</p>}
         {actionError && <p role="alert" className="mb-3 rounded-lg bg-red-50 p-3 text-xs text-red-700">{actionError}</p>}
+        {actionLoading && <p role="status" className="mb-3 rounded-lg bg-blue-50 p-3 text-xs text-blue-700">Memproses tindakan...</p>}
         {activeTab === 'verifikasi' && (
           <div className="space-y-6">
             <div className="flex flex-col items-center text-center mt-2 mb-6">
               <div className="h-16 w-16 bg-blue-50/50 rounded-2xl border border-blue-100 flex items-center justify-center text-[#1a2c4d] mb-3"><ShieldCheck className="h-8 w-8" /></div>
               <h2 className="text-xl font-extrabold text-[#1a2c4d]">Verifikasi User</h2>
-              <p className="text-gray-400 text-xs mt-1 font-medium">Approve atau reject akun yang pending</p>
+              <p className="text-gray-400 text-xs mt-1 font-medium">Setujui atau tolak pendaftaran akun Organisasi dan Sponsor</p>
             </div>
             {pendingAccounts.length === 0 ? (
-              <div className="bg-white rounded-2xl border border-gray-100 p-10 text-center text-xs text-gray-400 font-medium">Semua akun telah diverifikasi.</div>
+              <div className="bg-white rounded-2xl border border-gray-100 p-10 text-center text-xs text-gray-400 font-medium">Tidak ada akun yang menunggu verifikasi.</div>
             ) : (
               <div className="space-y-4">
                 {pendingAccounts.map(account => (
@@ -91,10 +94,10 @@ export default function AdminDashboard({
                     </div>
                     <div className="grid grid-cols-2 gap-3 pt-2">
                       <button disabled={actionLoading} onClick={() => void runAction(() => onApproveUser(account.id), 'Akun berhasil disetujui.')} className="py-2.5 px-4 bg-[#22c55e] hover:bg-emerald-600 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all">
-                        <Check className="h-4 w-4 stroke-[2.5]" /> Approve
+                        <Check className="h-4 w-4 stroke-[2.5]" /> Setujui Akun
                       </button>
                       <button disabled={actionLoading} onClick={() => void runAction(() => onRejectUser(account.id), 'Akun ditolak.')} className="py-2.5 px-4 bg-white border border-red-200 text-red-600 hover:bg-red-50 font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 active:scale-95 transition-all">
-                        <X className="h-4 w-4 stroke-[2.5]" /> Reject
+                        <X className="h-4 w-4 stroke-[2.5]" /> Tolak Akun
                       </button>
                     </div>
                   </div>
@@ -110,25 +113,33 @@ export default function AdminDashboard({
               <div className="h-16 w-16 bg-blue-50/50 rounded-2xl border border-blue-100 flex items-center justify-center text-[#1a2c4d] mb-3"><Users className="h-8 w-8" /></div>
               <h2 className="text-xl font-extrabold text-[#1a2c4d]">Manajemen User</h2>
             </div>
-            <span className="text-xs text-gray-400 font-bold font-mono">Total: {allUsers.length} pengguna</span>
+            <span className="text-xs text-gray-400 font-bold font-mono">Total: {visibleUsers.length} pengguna</span>
             <div className="space-y-3">
-              {allUsers.map(u => (
-                <div key={u.id} className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm flex items-center justify-between gap-3">
+              {visibleUsers.map(u => (
+                <div key={u.id} className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm flex flex-wrap items-center justify-between gap-3">
                   <div className="space-y-1 min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <h3 className="text-xs font-extrabold text-[#1a2c4d] truncate">{getUserDisplayName(u)}</h3>
                       <span className={`px-1.5 py-0.5 text-[8px] font-extrabold font-mono rounded-md uppercase ${u.status_akun === 'Aktif' ? 'bg-green-100 text-green-700' : u.status_akun === 'Menunggu Verifikasi' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>
-                        {u.status_akun === 'Aktif' ? 'ACTIVE' : u.status_akun === 'Menunggu Verifikasi' ? 'PENDING' : 'REJECTED'}
+                        {u.status_akun}
                       </span>
                     </div>
                     <p className="text-[10px] text-gray-400 font-mono truncate">{u.email}</p>
                     <span className={`px-1.5 py-0.5 text-[8px] font-extrabold rounded-md uppercase ${u.peran === 'Admin' ? 'bg-red-50 text-red-600' : u.peran === 'Organisasi' ? 'bg-blue-50 text-blue-600' : 'bg-emerald-50 text-emerald-600'}`}>{u.peran}</span>
                   </div>
                   {u.peran !== 'Admin' && (
-                    <button disabled={actionLoading} onClick={() => { if (confirm('Hapus pengguna ini secara permanen?')) void runAction(() => onDeleteUser(u.id), 'Pengguna berhasil dihapus.'); }}
-                      className="p-2.5 text-gray-400 hover:text-red-600 rounded-xl hover:bg-red-50 active:scale-95 transition-all shrink-0">
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                    <div className="flex flex-wrap gap-2">
+                      {u.status_akun !== 'Ditolak' && <button disabled={actionLoading} aria-label={`Tolak akun ${getUserDisplayName(u)}`}
+                        onClick={() => { if (u.status_akun !== 'Aktif' || confirm(`Tolak akun ${getUserDisplayName(u)}? Akun ini tidak dapat login setelah ditolak.`)) void runAction(() => onRejectUser(u.id), 'Akun ditolak dan tidak dapat login.'); }}
+                        className="flex items-center gap-1.5 rounded-xl border border-red-200 p-2.5 text-xs font-bold text-red-600 hover:bg-red-50 disabled:opacity-50">
+                        <X className="h-4 w-4" /> Tolak Akun
+                      </button>}
+                      <button disabled={actionLoading} aria-label={`Hapus akun ${getUserDisplayName(u)}`}
+                        onClick={() => { if (confirm(`Hapus akun ${u.peran} ${getUserDisplayName(u)}? Akun akan hilang dari daftar dan tidak dapat login lagi. Riwayat sponsorship tetap tersimpan.${u.peran === 'Organisasi' ? ' Pendanaan event organisasi ini juga akan ditutup.' : ''}`)) void runAction(() => onDeleteUser(u.id), 'Akun berhasil dihapus dari aplikasi. Riwayat sponsorship tetap tersimpan.'); }}
+                        className="flex items-center gap-1.5 rounded-xl border border-red-200 p-2.5 text-xs font-bold text-red-600 hover:bg-red-50 disabled:opacity-50">
+                        <Trash2 className="h-4 w-4" /> Hapus Akun
+                      </button>
+                    </div>
                   )}
                 </div>
               ))}
@@ -196,12 +207,13 @@ export default function AdminDashboard({
                     })()}
                     <div className="grid grid-cols-1 gap-2 text-xs">
                       <p><span className="w-16 font-semibold text-gray-400 inline-block">Donatur:</span> <span className="font-bold text-[#1a2c4d]">{tx.nama_sponsor || `Sponsor #${tx.id_sponsor}`}</span></p>
+                      {tx.nama_pengirim && <p><span className="font-semibold text-gray-400">Pengirim transfer:</span> {tx.nama_pengirim}</p>}
                       <p><span className="w-16 font-semibold text-gray-400 inline-block">Jumlah:</span> <span className="font-extrabold text-[#1a2c4d]">{formatIDR(tx.jumlah)}</span></p>
                       <p><span className="w-16 font-semibold text-gray-400 inline-block">Event:</span> {tx.nama_event || `Event #${tx.id_event}`}</p>
                       <p><span className="w-16 font-semibold text-gray-400 inline-block">Paket:</span> {tx.nama_paket}</p>
                     </div>
                     <div className="space-y-2 pt-2 border-t border-dashed border-gray-100">
-                      <h4 className="text-[10px] font-extrabold text-gray-400 uppercase">Bukti Pembayaran</h4>
+                      <h4 className="text-[10px] font-extrabold text-gray-400 uppercase">Bukti Pembayaran dan Lampiran Sponsor</h4>
                       {tx.bukti_pembayaran && (tx.bukti_pembayaran.startsWith('/api/uploads/') || tx.bukti_pembayaran.startsWith('http')) ? (
                         <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 flex flex-col items-center gap-2">
                           <img
@@ -225,13 +237,14 @@ export default function AdminDashboard({
                           <span className="text-[10px] text-gray-400 italic">Tidak ada bukti pembayaran</span>
                         </div>
                       )}
+                      <MaterialFiles files={tx.sponsor_files} />
                     </div>
                     <div className="grid grid-cols-2 gap-3 pt-2">
                       <button disabled={actionLoading} onClick={() => void runAction(() => onApprovePayment(tx.id_transaksi), 'Pembayaran diverifikasi. Event otomatis ditutup jika target dana terpenuhi.')} className="py-2.5 px-4 bg-[#22c55e] hover:bg-emerald-600 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all">
-                        <Check className="h-4 w-4 stroke-[2.5]" /> Approve Bayar
+                        <Check className="h-4 w-4 stroke-[2.5]" /> Verifikasi Pembayaran
                       </button>
                       <button disabled={actionLoading} onClick={() => void runAction(() => onRejectPayment(tx.id_transaksi), 'Pembayaran ditolak.')} className="py-2.5 px-4 bg-white border border-red-200 text-red-600 hover:bg-red-50 font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 active:scale-95 transition-all">
-                        <X className="h-4 w-4 stroke-[2.5]" /> Reject Bayar
+                        <X className="h-4 w-4 stroke-[2.5]" /> Tolak Pembayaran
                       </button>
                     </div>
                   </div>

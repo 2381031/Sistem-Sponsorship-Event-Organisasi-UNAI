@@ -3,6 +3,7 @@ import pool from '../database';
 import { closeFundedEvents, sponsorshipAmount } from '../events/funding';
 import { SponsorFile, mergeMaterials } from './package-materials';
 import { ensureSponsorFiles, validateMaterials } from './sponsor-files';
+import { editDetails } from './edit-details';
 
 @Injectable()
 export class TransaksiService {
@@ -103,8 +104,9 @@ export class TransaksiService {
   async update(
     id: number,
     idPengguna: number,
-    data: { jumlah?: number; bukti_pembayaran?: string; id_paket?: number; sponsor_files?: SponsorFile[] },
+    data: { jumlah?: number; bukti_pembayaran?: string; id_paket?: number; sponsor_files?: SponsorFile[]; nama_sponsor?: unknown; nama_pengirim?: unknown; remove_materials?: unknown },
   ) {
+    const details = editDetails(data);
     const original = await this.findOne(id);
     const client = await pool.connect();
     try {
@@ -124,12 +126,18 @@ export class TransaksiService {
     const paket = (await client.query('SELECT * FROM paket_sponsorship WHERE id_paket = $1 AND id_event = $2', [data.id_paket ?? transaksi.id_paket, transaksi.id_event])).rows[0];
     if (!paket) throw new BadRequestException('Paket tidak tersedia pada event ini');
     const amount = sponsorshipAmount(paket, event.target_dana, data.jumlah ?? transaksi.jumlah);
-    const materials = mergeMaterials(paket, transaksi.sponsor_files || [], data.sponsor_files || []);
+    const retained = (transaksi.sponsor_files || []).filter((file: SponsorFile) => !details.remove_materials.includes(file.kind));
+    const materials = mergeMaterials(paket, retained, data.sponsor_files || []);
     validateMaterials(paket, materials);
     if (!amount) throw new BadRequestException('Nominal sponsorship harus lebih dari nol');
     const result = await client.query(`UPDATE transaksi_sponsorship SET id_paket = $1, nama_paket = $2,
-      jumlah = $3, bukti_pembayaran = $4, sponsor_files = $6::jsonb WHERE id_transaksi = $5 RETURNING *`,
-      [paket.id_paket, paket.nama_paket, amount, data.bukti_pembayaran ?? transaksi.bukti_pembayaran, id, JSON.stringify(materials)]);
+      jumlah = $3, bukti_pembayaran = $4, sponsor_files = $6::jsonb,
+      nama_sponsor = $7, nama_pengirim = $8
+      WHERE id_transaksi = $5 AND status_pembayaran = 'Menunggu' RETURNING *`,
+      [paket.id_paket, paket.nama_paket, amount, data.bukti_pembayaran ?? transaksi.bukti_pembayaran, id, JSON.stringify(materials),
+       details.nama_sponsor ?? transaksi.nama_sponsor ?? null,
+       details.nama_pengirim === undefined ? transaksi.nama_pengirim ?? null : details.nama_pengirim || null]);
+    if (!result.rows[0]) throw new BadRequestException('Transaksi sudah diproses oleh admin');
     await client.query('COMMIT');
     return result.rows[0];
     } catch (error) {

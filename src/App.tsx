@@ -157,6 +157,11 @@ export default function App() {
       setEvents(previous => [event, ...previous.filter(item => item.id_event !== event.id_event)]));
   };
 
+  const handleUploadDocumentation = async (data: FormData) => {
+    await save(() => api.createDoc(data), doc =>
+      setDocs(previous => [doc, ...previous.filter(item => item.id_dokumentasi !== doc.id_dokumentasi)]));
+  };
+
   const handleUpdateEvent = async (id: number, data: any) => {
     await save(() => api.updateEvent(id, data), event =>
       setEvents(previous => previous.map(item => item.id_event === id ? { ...item, ...event } : item)));
@@ -177,6 +182,11 @@ export default function App() {
       setTransactions(previous => previous.map(item => item.id_transaksi === id ? { ...item, ...tx } : item)));
   };
 
+  const handleUpdateProfile = async (data: any) => {
+    if (!currentUser) return;
+    await save(() => api.updateUser(currentUser.id, data), user => setCurrentUser(user));
+  };
+
   const handleApproveUser = async (userId: number) => {
     await save(() => api.updateUserStatus(userId, 'Aktif'), user =>
       setAllUsers(previous => previous.map(item => item.id === userId ? user : item)));
@@ -188,8 +198,10 @@ export default function App() {
   };
 
   const handleDeleteUser = async (userId: number) => {
-    await save(() => api.deleteUser(userId), () =>
-      setAllUsers(previous => previous.filter(item => item.id !== userId)));
+    await save(() => api.deleteUser(userId), () => {
+      setAllUsers(previous => previous.filter(item => item.id !== userId));
+      setEvents(previous => previous.map(event => event.id_organisasi === userId ? { ...event, status_event: 'Ditutup' } : event));
+    });
   };
 
   const handleApprovePayment = async (txId: number) => {
@@ -231,9 +243,11 @@ export default function App() {
                 events={events}
                 transactions={transactions}
                 docs={docs}
+                onUploadDocumentation={handleUploadDocumentation}
                 onCreateEvent={handleCreateEvent}
                 onUpdateEvent={handleUpdateEvent}
                 onUpdateEventStatus={handleUpdateEventStatus}
+                onUpdateProfile={handleUpdateProfile}
                 onLogout={handleLogout}
               />
             ) :             currentUser.peran === 'Sponsor' ? (
@@ -245,6 +259,7 @@ export default function App() {
                 allUsers={allUsers}
                 onAddTransaction={handleAddTransaction}
                 onUpdateTransaction={handleUpdateTransaction}
+                onUpdateProfile={handleUpdateProfile}
                 onLogout={handleLogout}
               />
             ) : (

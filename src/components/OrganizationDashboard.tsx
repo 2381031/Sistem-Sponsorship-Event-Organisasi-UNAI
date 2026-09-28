@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { User, Event, SponsorshipTransaction, EventDoc } from '../types';
-import { api } from '../api';
 import DocumentGallery from './DocumentGallery';
+import EventDocumentationUpload from './EventDocumentationUpload';
 import { MaterialFiles } from './SponsorMaterials';
 import {
   Building2, Calendar, Target, DollarSign, UploadCloud, Users, CheckCircle2,
@@ -15,17 +15,20 @@ interface Props {
   events: Event[];
   transactions: SponsorshipTransaction[];
   docs: EventDoc[];
+  onUploadDocumentation: (data: FormData) => Promise<void>;
   onCreateEvent: (data: any) => Promise<void>;
   onUpdateEvent: (id: number, data: any) => Promise<void>;
   onUpdateEventStatus: (id: number, status: string) => Promise<void>;
+  onUpdateProfile: (data: any) => Promise<void>;
   onLogout: () => void;
 }
 
 export default function OrganizationDashboard({
-  currentUser, events, transactions, docs, onCreateEvent, onUpdateEvent, onUpdateEventStatus, onLogout
+  currentUser, events, transactions, docs, onUploadDocumentation, onCreateEvent, onUpdateEvent, onUpdateEventStatus, onUpdateProfile, onLogout
 }: Props) {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'manajemen' | 'buat-event' | 'profil'>('dashboard');
   const profil = currentUser.profil;
+  const savedNama = profil?.nama_organisasi || '';
 
   const [profileNama, setProfileNama] = useState(profil?.nama_organisasi || '');
   const [profileDeskripsi, setProfileDeskripsi] = useState(profil?.deskripsi || '');
@@ -76,7 +79,7 @@ export default function OrganizationDashboard({
     setProfileLoading(true);
     setProfileSuccess('');
     try {
-      await api.updateUser(currentUser.id, {
+      await onUpdateProfile({
         organisasiDetails: {
           nama_organisasi: profileNama,
           deskripsi: profileDeskripsi,
@@ -194,10 +197,10 @@ export default function OrganizationDashboard({
       <div className="bg-[#1a2c4d] text-white px-4 md:px-6 py-3 md:py-4 flex items-center justify-between shadow-md shrink-0">
         <div className="flex items-center gap-3 min-w-0">
           <div className="h-10 w-10 bg-white/10 rounded-xl flex items-center justify-center font-bold text-yellow-400 shrink-0">
-            {profileNama?.substring(0, 2).toUpperCase() || 'OM'}
+            {savedNama.substring(0, 2).toUpperCase() || 'OM'}
           </div>
           <div className="min-w-0">
-            <h1 className="text-sm font-bold tracking-tight truncate">{profileNama}</h1>
+            <h1 className="text-sm font-bold tracking-tight truncate">{savedNama}</h1>
             <p className="text-[10px] text-gray-300 font-medium">Organisasi</p>
           </div>
         </div>
@@ -310,6 +313,7 @@ export default function OrganizationDashboard({
                       </div>
                     </details>
                     <DocumentGallery docs={docs.filter(doc => doc.id_event === event.id_event)} />
+                    <EventDocumentationUpload eventId={event.id_event} eventName={event.nama_event} onUpload={onUploadDocumentation} />
 
                     <div className="grid grid-cols-2 gap-3 pt-2">
                       <button onClick={() => { setEditingEvent(event); setProposalFile(null); setCreateError(''); setCreateSuccess(''); setNamaEvent(event.nama_event); setTanggalEvent(event.tanggal_event); setDeskripsiEvent(event.deskripsi || ''); setTargetDana(event.target_dana); setActiveTab('buat-event'); }}

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ForbiddenException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException, ConflictException } from '@nestjs/common';
 import bcrypt from 'bcryptjs';
 import pool from '../database';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -71,6 +71,7 @@ export class UserService {
        FROM users u
        LEFT JOIN organisasi o ON u.id_pengguna = o.id_pengguna
        LEFT JOIN sponsor s ON u.id_pengguna = s.id_pengguna
+       WHERE u.status_akun <> 'Dihapus'
        ORDER BY u.id_pengguna`,
     );
 
@@ -117,8 +118,15 @@ export class UserService {
   }
 
   async updateStatus(id: number, status: string, adminId?: number) {
-    const result = await pool.query('UPDATE users SET status_akun = $1 WHERE id_pengguna = $2 RETURNING id_pengguna', [status, id]);
-    if (!result.rows.length) throw new NotFoundException('User not found');
+    if (!['Aktif', 'Ditolak'].includes(status)) throw new BadRequestException('Status akun tidak valid');
+    const result = await pool.query(`UPDATE users SET status_akun = $1
+      WHERE id_pengguna = $2 AND peran IN ('Organisasi', 'Sponsor') AND status_akun <> 'Dihapus'
+      RETURNING id_pengguna`, [status, id]);
+    if (!result.rows.length) {
+      const user = await this.findById(id);
+      if (user.status_akun === 'Dihapus') throw new NotFoundException('Akun sudah dihapus');
+      throw new ForbiddenException('Hanya status akun Organisasi dan Sponsor yang dapat diubah');
+    }
     return this.findByIdWithProfile(id);
   }
 
@@ -156,9 +164,10 @@ export class UserService {
       }
 
       await client.query('COMMIT');
-      return { message: 'User updated' };
+      return this.findByIdWithProfile(id);
     } catch (err) {
       await client.query('ROLLBACK');
+      if ((err as { code?: string }).code === '23505') throw new ConflictException('Email sudah digunakan akun lain. Gunakan email yang berbeda.');
       throw err;
     } finally {
       client.release();
@@ -166,17 +175,23 @@ export class UserService {
   }
 
   async delete(id: number) {
-    const user = await this.findById(id);
-    if (!['Organisasi', 'Sponsor'].includes(user.peran)) {
-      throw new ForbiddenException('Hanya akun Organisasi dan Sponsor yang dapat dihapus');
-    }
+    const client = await pool.connect();
     try {
-      await pool.query('DELETE FROM users WHERE id_pengguna = $1', [id]);
-    } catch (error) {
-      if ((error as { code?: string }).code === '23503') {
-        throw new ConflictException('Akun masih terkait transaksi atau data lain sehingga belum dapat dihapus. Riwayat pembayaran tetap dipertahankan.');
+      await client.query('BEGIN');
+      const user = (await client.query('SELECT peran, status_akun FROM users WHERE id_pengguna = $1 FOR UPDATE', [id])).rows[0];
+      if (!user || user.status_akun === 'Dihapus') throw new NotFoundException('Akun tidak ditemukan atau sudah dihapus');
+      if (!['Organisasi', 'Sponsor'].includes(user.peran)) {
+        throw new ForbiddenException('Hanya akun Organisasi dan Sponsor yang dapat dihapus');
       }
+      // Retain referenced financial records while revoking account access.
+      await client.query("UPDATE users SET status_akun = 'Dihapus' WHERE id_pengguna = $1", [id]);
+      if (user.peran === 'Organisasi') {
+        await client.query("UPDATE event SET status_event = 'Ditutup' WHERE id_organisasi = $1", [id]);
+      }
+      await client.query('COMMIT');
+    } catch (error) {
+      await client.query('ROLLBACK');
       throw error;
-    }
+    } finally { client.release(); }
   }
 }

@@ -1,7 +1,9 @@
-import { IsEmail, IsEnum, IsObject, IsOptional, IsString, MinLength } from 'class-validator';
+import { IsEmail, IsEnum, IsObject, IsOptional, IsString, MinLength, MaxLength } from 'class-validator';
+import { Transform } from 'class-transformer';
 
 export class UpdateUserDto {
-  @IsOptional() @IsEmail() email?: string;
+  @Transform(({ value }) => typeof value === 'string' ? value.trim() : value)
+  @IsOptional() @IsEmail() @MaxLength(255) email?: string;
   @IsOptional() @IsString() @MinLength(6) password?: string;
   @IsOptional() @IsString() nama_lengkap?: string;
   @IsOptional() @IsEnum(['Organisasi', 'Sponsor', 'Admin'] as const) peran?: string;
