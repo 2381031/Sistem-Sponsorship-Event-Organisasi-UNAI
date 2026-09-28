@@ -39,6 +39,7 @@ export default function AdminDashboard({
   const formatIDR = (num: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(num);
 
   const visibleUsers = allUsers.filter(u => u.status_akun !== 'Dihapus');
+  const managedUsers = visibleUsers.filter(u => u.status_akun !== 'Menunggu Verifikasi');
   const pendingAccounts = visibleUsers.filter(u => u.peran !== 'Admin' && u.status_akun === 'Menunggu Verifikasi');
   const pendingPayments = transactions.filter(t => t.status_pembayaran === 'Menunggu');
 
@@ -113,9 +114,9 @@ export default function AdminDashboard({
               <div className="h-16 w-16 bg-blue-50/50 rounded-2xl border border-blue-100 flex items-center justify-center text-[#1a2c4d] mb-3"><Users className="h-8 w-8" /></div>
               <h2 className="text-xl font-extrabold text-[#1a2c4d]">Manajemen User</h2>
             </div>
-            <span className="text-xs text-gray-400 font-bold font-mono">Total: {visibleUsers.length} pengguna</span>
+            <span className="text-xs text-gray-400 font-bold font-mono">Total: {managedUsers.length} pengguna</span>
             <div className="space-y-3">
-              {visibleUsers.map(u => (
+              {managedUsers.map(u => (
                 <div key={u.id} className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm flex flex-wrap items-center justify-between gap-3">
                   <div className="space-y-1 min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -129,11 +130,6 @@ export default function AdminDashboard({
                   </div>
                   {u.peran !== 'Admin' && (
                     <div className="flex flex-wrap gap-2">
-                      {u.status_akun === 'Menunggu Verifikasi' && <button disabled={actionLoading} aria-label={`Tolak akun ${getUserDisplayName(u)}`}
-                        onClick={() => { void runAction(() => onRejectUser(u.id), 'Akun ditolak dan tidak dapat login.'); }}
-                        className="flex items-center gap-1.5 rounded-xl border border-red-200 p-2.5 text-xs font-bold text-red-600 hover:bg-red-50 disabled:opacity-50">
-                        <X className="h-4 w-4" /> Tolak Akun
-                      </button>}
                       <button disabled={actionLoading} aria-label={`Hapus akun ${getUserDisplayName(u)}`}
                         onClick={() => { if (confirm(`Hapus akun ${u.peran} ${getUserDisplayName(u)}? Akun akan hilang dari daftar dan tidak dapat login lagi. Riwayat sponsorship tetap tersimpan.${u.peran === 'Organisasi' ? ' Pendanaan event organisasi ini juga akan ditutup.' : ''}`)) void runAction(() => onDeleteUser(u.id), 'Akun berhasil dihapus dari aplikasi. Riwayat sponsorship tetap tersimpan.'); }}
                         className="flex items-center gap-1.5 rounded-xl border border-red-200 p-2.5 text-xs font-bold text-red-600 hover:bg-red-50 disabled:opacity-50">

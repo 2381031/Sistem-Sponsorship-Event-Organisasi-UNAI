@@ -361,6 +361,13 @@ try {
     hold: ['PATCH /api/users/7/status', 'PATCH /api/users/8/status', 'DELETE /api/users/7', 'DELETE /api/users/8', 'PATCH /api/sponsorships/31/verify'] });
   const adminPage = adminTab.page;
   await until(() => includes(adminPage, 'Tolak Akun'), 'admin account decisions');
+  await click(adminPage, 'Pengguna');
+  assert.equal(await includes(adminPage, 'Total: 1 pengguna'), true, 'pending accounts excluded from user management count');
+  assert.equal(await includes(adminPage, organization.email), false);
+  assert.equal(await includes(adminPage, sponsor.email), false);
+  assert.equal(await includes(adminPage, 'Tolak Akun'), false);
+  await click(adminPage, 'Verifikasi');
+
   for (const user of [organization, sponsor]) {
     await click(adminPage, 'Tolak Akun');
     const path = `/api/users/${user.id}/status`;
