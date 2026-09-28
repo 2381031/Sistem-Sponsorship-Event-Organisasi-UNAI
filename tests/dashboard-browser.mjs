@@ -348,6 +348,13 @@ try {
   assert.deepEqual(await profilePage.evaluate('window.__mock.errors'), []);
   await profileTab.close();
   console.log('PASS: edited email sent to server, conflicts preserve session, successful response updates profile and session.');
+  const activeAccountsTab = await openPage({ user: { id: 1, email: 'admin@example.invalid', peran: 'Admin', status_akun: 'Aktif' }, users: [organization, sponsor] });
+  await until(() => includes(activeAccountsTab.page, 'Tidak ada akun yang menunggu verifikasi.'), 'active accounts dashboard ready');
+  await click(activeAccountsTab.page, 'Pengguna');
+  await until(() => includes(activeAccountsTab.page, 'Total: 2 pengguna'), 'active accounts loaded');
+  assert.equal(await activeAccountsTab.page.evaluate(`document.querySelectorAll('button[aria-label^="Tolak akun"]').length`), 0, 'approved accounts cannot be rejected');
+  assert.equal(await activeAccountsTab.page.evaluate(`document.querySelectorAll('button[aria-label^="Hapus akun"]').length`), 2, 'approved accounts can be deleted');
+  await activeAccountsTab.close();
   console.log('Checking admin rejection and account removal...');
   const admin = { id: 1, email: 'admin@example.invalid', peran: 'Admin', status_akun: 'Aktif' };
   const adminTab = await openPage({ user: admin, users: [admin, { ...organization, status_akun: 'Menunggu Verifikasi' }, { ...sponsor, status_akun: 'Menunggu Verifikasi' }], transactions: [{ ...tx, sponsor_files: [oldBrochure] }],

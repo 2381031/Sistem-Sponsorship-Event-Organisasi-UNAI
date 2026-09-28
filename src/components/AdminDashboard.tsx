@@ -129,8 +129,8 @@ export default function AdminDashboard({
                   </div>
                   {u.peran !== 'Admin' && (
                     <div className="flex flex-wrap gap-2">
-                      {u.status_akun !== 'Ditolak' && <button disabled={actionLoading} aria-label={`Tolak akun ${getUserDisplayName(u)}`}
-                        onClick={() => { if (u.status_akun !== 'Aktif' || confirm(`Tolak akun ${getUserDisplayName(u)}? Akun ini tidak dapat login setelah ditolak.`)) void runAction(() => onRejectUser(u.id), 'Akun ditolak dan tidak dapat login.'); }}
+                      {u.status_akun === 'Menunggu Verifikasi' && <button disabled={actionLoading} aria-label={`Tolak akun ${getUserDisplayName(u)}`}
+                        onClick={() => { void runAction(() => onRejectUser(u.id), 'Akun ditolak dan tidak dapat login.'); }}
                         className="flex items-center gap-1.5 rounded-xl border border-red-200 p-2.5 text-xs font-bold text-red-600 hover:bg-red-50 disabled:opacity-50">
                         <X className="h-4 w-4" /> Tolak Akun
                       </button>}

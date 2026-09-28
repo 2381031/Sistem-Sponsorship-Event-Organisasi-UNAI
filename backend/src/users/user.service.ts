@@ -120,12 +120,13 @@ export class UserService {
   async updateStatus(id: number, status: string, adminId?: number) {
     if (!['Aktif', 'Ditolak'].includes(status)) throw new BadRequestException('Status akun tidak valid');
     const result = await pool.query(`UPDATE users SET status_akun = $1
-      WHERE id_pengguna = $2 AND peran IN ('Organisasi', 'Sponsor') AND status_akun <> 'Dihapus'
+      WHERE id_pengguna = $2 AND peran IN ('Organisasi', 'Sponsor') AND status_akun = 'Menunggu Verifikasi'
       RETURNING id_pengguna`, [status, id]);
     if (!result.rows.length) {
       const user = await this.findById(id);
       if (user.status_akun === 'Dihapus') throw new NotFoundException('Akun sudah dihapus');
-      throw new ForbiddenException('Hanya status akun Organisasi dan Sponsor yang dapat diubah');
+      if (!['Organisasi', 'Sponsor'].includes(user.peran)) throw new ForbiddenException('Hanya status akun Organisasi dan Sponsor yang dapat diubah');
+      throw new BadRequestException('Hanya akun yang menunggu verifikasi yang dapat disetujui atau ditolak. Akun yang sudah disetujui hanya dapat dihapus.');
     }
     return this.findByIdWithProfile(id);
   }

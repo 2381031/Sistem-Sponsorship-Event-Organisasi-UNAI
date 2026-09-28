@@ -68,14 +68,14 @@ test('deleted accounts are excluded from management and rejected by an existing 
   } finally { pool.query = original; }
 });
 
-test('status changes cannot affect admin accounts or restore deleted accounts', async () => {
+test('status decisions only apply to pending accounts', async () => {
   const original = pool.query;
   try {
-    for (const [user, statusCode] of [[{ peran: 'Admin', status_akun: 'Aktif' }, 403], [{ peran: 'Sponsor', status_akun: 'Dihapus' }, 404]]) {
+    for (const [user, statusCode] of [[{ peran: 'Admin', status_akun: 'Aktif' }, 403], [{ peran: 'Sponsor', status_akun: 'Dihapus' }, 404], [{ peran: 'Sponsor', status_akun: 'Aktif' }, 400], [{ peran: 'Organisasi', status_akun: 'Aktif' }, 400], [{ peran: 'Sponsor', status_akun: 'Ditolak' }, 400]]) {
       pool.query = async sql => {
         if (sql.startsWith('UPDATE')) {
           assert.match(sql, /peran IN \('Organisasi', 'Sponsor'\)/);
-          assert.match(sql, /status_akun <> 'Dihapus'/);
+          assert.match(sql, /status_akun = 'Menunggu Verifikasi'/);
           return { rows: [] };
         }
         return { rows: [user] };
