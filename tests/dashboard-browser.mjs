@@ -159,6 +159,36 @@ try {
   const count = (list, path, method = 'GET') => list.filter(call => call.path === path && call.method === method).length;
   const click = (page, text) => page.evaluate(`(() => { const button = [...document.querySelectorAll('button')].find(button => button.textContent.includes(${JSON.stringify(text)})); if (!button) throw new Error('Missing button: ' + ${JSON.stringify(text)}); button.click(); })()`);
 
+  console.log('Checking exact target amount input and save...');
+  const amountTab = await openPage({ user: organization, hold: ['PATCH /api/events/11'] });
+  const amountPage = amountTab.page;
+  await until(() => includes(amountPage, event.nama_event), 'amount event loaded');
+  await click(amountPage, 'Event');
+  for (const [index, entered] of ['25000000', '25 000 000', '25.000.000'].entries()) {
+    await click(amountPage, 'Edit');
+    await until(async () => await amountPage.evaluate(`!!document.getElementById('target-dana')`), 'target input');
+    assert.equal(await amountPage.evaluate(`document.getElementById('target-dana').type`), 'text', 'no numeric spinner');
+    await amountPage.evaluate(`(() => {
+      const input = document.getElementById('target-dana');
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, ${JSON.stringify(entered)});
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.focus();
+    })()`);
+    await amountPage.send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'ArrowDown', code: 'ArrowDown', windowsVirtualKeyCode: 40 });
+    await amountPage.send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'ArrowDown', code: 'ArrowDown', windowsVirtualKeyCode: 40 });
+    await amountPage.evaluate(`document.getElementById('target-dana').dispatchEvent(new WheelEvent('wheel', { deltaY: 100, bubbles: true }))`);
+    assert.equal(await amountPage.evaluate(`document.getElementById('target-dana').value`), '25000000');
+    await click(amountPage, 'Simpan Perubahan');
+    await until(async () => count(await calls(amountPage), '/api/events/11', 'PATCH') === index + 1, 'target save');
+    assert.equal((await calls(amountPage)).filter(call => call.path === '/api/events/11' && call.method === 'PATCH').at(-1).fields.target_dana, '25000000');
+    await amountPage.evaluate(`window.__mock.release('/api/events/11', ${JSON.stringify({ ...event, target_dana: '25000000.00' })})`);
+    await until(() => includes(amountPage, 'Manajemen Event'), 'saved target returned');
+  }
+  await click(amountPage, 'Edit');
+  assert.equal(await amountPage.evaluate(`document.getElementById('target-dana').value`), '25000000', 'saved decimal database string remains exact');
+  await amountTab.close();
+  console.log('PASS: target stays 25000000 for plain, spaced and grouped input, arrows, save, and reopen.');
+
   console.log('Checking organization loading while documentation/profile are pending...');
   const orgTab = await openPage({ user: organization, hold: ['GET /api/dokumentasi', 'GET /api/users/7'] });
   const orgPage = orgTab.page;

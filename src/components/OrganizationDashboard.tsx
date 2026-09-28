@@ -51,7 +51,7 @@ export default function OrganizationDashboard({
   const [namaEvent, setNamaEvent] = useState('');
   const [tanggalEvent, setTanggalEvent] = useState('');
   const [deskripsiEvent, setDeskripsiEvent] = useState('');
-  const [targetDana, setTargetDana] = useState(50000000);
+  const [targetDana, setTargetDana] = useState('50000000');
   const [proposalFile, setProposalFile] = useState<File | null>(null);
   const [createError, setCreateError] = useState('');
   const [createSuccess, setCreateSuccess] = useState('');
@@ -104,6 +104,10 @@ export default function OrganizationDashboard({
     if (createPending.current) return;
     setCreateError('');
     setCreateSuccess('');
+    if (!/^\d+$/.test(targetDana) || !Number.isSafeInteger(Number(targetDana)) || Number(targetDana) <= 0) {
+      setCreateError('Target dana harus berupa nominal rupiah bulat lebih dari nol.');
+      return;
+    }
     if (!proposalFile && !editingEvent?.url_proposal) {
       setCreateError('Upload Proposal Event Organisasi PDF sebelum menerbitkan event.');
       return;
@@ -279,7 +283,7 @@ export default function OrganizationDashboard({
               <h2 className="text-xl font-bold text-[#1a2c4d] tracking-tight">Manajemen Event</h2>
             </div>
             {createSuccess && <div role="status" className="p-3 bg-emerald-50 border border-emerald-100 text-emerald-600 text-xs rounded-xl font-medium flex items-center gap-2"><CheckCircle2 className="h-4 w-4" />{createSuccess}</div>}
-            <button onClick={() => { setActiveTab('buat-event'); setProposalFile(null); setCreateError(''); setCreateSuccess(''); setEditingEvent(null); setNamaEvent(''); setTanggalEvent(''); setDeskripsiEvent(''); setTargetDana(50000000); }}
+            <button onClick={() => { setActiveTab('buat-event'); setProposalFile(null); setCreateError(''); setCreateSuccess(''); setEditingEvent(null); setNamaEvent(''); setTanggalEvent(''); setDeskripsiEvent(''); setTargetDana('50000000'); }}
               className="w-full py-3 bg-[#1a2c4d] hover:bg-[#15233e] text-white font-bold text-xs rounded-xl transition-all shadow-md">
               + Buat Event Baru
             </button>
@@ -316,7 +320,7 @@ export default function OrganizationDashboard({
                     <EventDocumentationUpload eventId={event.id_event} eventName={event.nama_event} onUpload={onUploadDocumentation} />
 
                     <div className="grid grid-cols-2 gap-3 pt-2">
-                      <button onClick={() => { setEditingEvent(event); setProposalFile(null); setCreateError(''); setCreateSuccess(''); setNamaEvent(event.nama_event); setTanggalEvent(event.tanggal_event); setDeskripsiEvent(event.deskripsi || ''); setTargetDana(event.target_dana); setActiveTab('buat-event'); }}
+                      <button onClick={() => { setEditingEvent(event); setProposalFile(null); setCreateError(''); setCreateSuccess(''); setNamaEvent(event.nama_event); setTanggalEvent(event.tanggal_event); setDeskripsiEvent(event.deskripsi || ''); setTargetDana(String(Number(event.target_dana))); setActiveTab('buat-event'); }}
                         className="py-2.5 bg-[#f8fafc] hover:bg-gray-100 text-[#1a2c4d] font-bold text-[11px] rounded-xl border border-gray-100 flex items-center justify-center gap-1.5">
                         <Edit3 className="h-3.5 w-3.5" /> Edit
                       </button>
@@ -349,8 +353,8 @@ export default function OrganizationDashboard({
                 <input type="date" required value={tanggalEvent} onChange={(e) => setTanggalEvent(e.target.value)} className="w-full px-4 py-3 text-xs bg-[#f8fafc] border border-gray-100 rounded-xl focus:outline-none" /></div>
               <div className="space-y-1"><label className="text-xs font-bold text-gray-700">Deskripsi Event <span className="text-red-500">*</span></label>
                 <textarea rows={4} required value={deskripsiEvent} onChange={(e) => setDeskripsiEvent(e.target.value)} className="w-full px-4 py-3 text-xs bg-[#f8fafc] border border-gray-100 rounded-xl focus:outline-none resize-none" /></div>
-              <div className="space-y-1"><label className="text-xs font-bold text-gray-700">Target Dana (Rp) <span className="text-red-500">*</span></label>
-                <input type="number" required value={targetDana} onChange={(e) => setTargetDana(parseInt(e.target.value) || 0)} className="w-full px-4 py-3 text-xs bg-[#f8fafc] border border-gray-100 rounded-xl focus:outline-none" /></div>
+              <div className="space-y-1"><label htmlFor="target-dana" className="text-xs font-bold text-gray-700">Target Dana (Rp) <span className="text-red-500">*</span></label>
+                <input id="target-dana" name="target_dana" type="text" inputMode="numeric" pattern="[0-9]+" required value={targetDana} onChange={(e) => { const digits = e.target.value.replace(/[.\s]/g, ''); if (/^\d*$/.test(digits)) setTargetDana(digits); }} className="w-full px-4 py-3 text-xs bg-[#f8fafc] border border-gray-100 rounded-xl focus:outline-none" /></div>
                 <div className="space-y-1.5"><label htmlFor="event-proposal" className="text-xs font-bold text-gray-700">Upload Proposal Event Organisasi (.pdf) <span className="text-red-500">*</span></label>
                   <p className="text-xs text-gray-500">Wajib sebelum event diterbitkan. File PDF maksimal 10 MB.</p>
                   {editingEvent?.url_proposal && <a href={editingEvent.url_proposal} target="_blank" rel="noreferrer" className="text-xs text-blue-700 underline">Lihat proposal event organisasi tersimpan (pilih file untuk mengganti)</a>}
